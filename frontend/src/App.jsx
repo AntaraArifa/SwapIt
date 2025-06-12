@@ -10,16 +10,11 @@ import Navbar from './components/shared/Navbar';
 import SignIn from './components/pages/Authentication/SignIn';
 import SignUp from './components/pages/Authentication/Signup';
 import Home from './components/pages/General/Home';
+import About from './components/pages/General/About';
 
 const Skills = () => (
   <div className="p-6 text-center">
     <h2 className="text-3xl font-semibold">Skills</h2>
-  </div>
-);
-
-const About = () => (
-  <div className="p-6 text-center">
-    <h2 className="text-3xl font-semibold">About</h2>
   </div>
 );
 
@@ -46,6 +41,7 @@ const App = () => {
         <Route path="/about" element={<About />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/about" element={<About />} />
       </Routes>
     </Router>
   );
