@@ -1,15 +1,30 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import { useSelector, useDispatch } from 'react-redux';
+import { setUser } from '@/redux/authSlice';
+import { toast } from 'sonner';
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const user = useSelector(state => state.auth.user);
+  const isLoggedIn = !!user;
 
   const navItems = [
     { name: 'Home', href: '/' },
     { name: 'Skills', href: '/skills' },
     { name: 'About', href: '/about' },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    dispatch(setUser(null));
+    toast.success("Logged out successfully!");
+    navigate('/signin');
+  };
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
@@ -31,12 +46,22 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
-            <Link
-              to="/signin"
-              className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition font-semibold"
-            >
-              Sign In
-            </Link>
+
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition font-semibold"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link
+                to="/signin"
+                className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition font-semibold"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -64,13 +89,26 @@ const Navbar = () => {
               {item.name}
             </Link>
           ))}
-          <Link
-            to="/signin"
-            className="block px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold text-center"
-            onClick={() => setMenuOpen(false)}
-          >
-            Sign In
-          </Link>
+
+          {isLoggedIn ? (
+            <button
+              onClick={() => {
+                handleLogout();
+                setMenuOpen(false);
+              }}
+              className="block w-full px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 font-semibold text-center"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              to="/signin"
+              className="block px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold text-center"
+              onClick={() => setMenuOpen(false)}
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       )}
     </nav>

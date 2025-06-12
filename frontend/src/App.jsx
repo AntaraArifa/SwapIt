@@ -1,18 +1,36 @@
-import React from 'react';
+// App.jsx
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUser } from './redux/authSlice';
+
+import { Toaster } from 'sonner';
+
 import Navbar from './components/shared/Navbar';
 import SignIn from './components/pages/Authentication/SignIn';
 import SignUp from './components/pages/Authentication/Signup';
 
-// Dummy pages for now
 const Home = () => <div className="p-6 text-center"><h2 className="text-3xl font-semibold">Home</h2></div>;
 const Skills = () => <div className="p-6 text-center"><h2 className="text-3xl font-semibold">Skills</h2></div>;
 const About = () => <div className="p-6 text-center"><h2 className="text-3xl font-semibold">About</h2></div>;
 
 const App = () => {
+  const dispatch = useDispatch();
+  const user = useSelector(state => state.auth.user);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    if (storedUser && token) {
+      dispatch(setUser(JSON.parse(storedUser)));
+    }
+  }, [dispatch]);
+
   return (
     <Router>
-      <Navbar />
+      <Toaster position="top-center" richColors />
+
+      <Navbar isLoggedIn={!!user} />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/skills" element={<Skills />} />
