@@ -11,6 +11,7 @@ import SignIn from './components/pages/Authentication/SignIn';
 import SignUp from './components/pages/Authentication/Signup';
 import Home from './components/pages/General/Home';
 import About from './components/pages/General/About';
+import Footer from './components/shared/Footer';
 
 const Skills = () => (
   <div className="p-6 text-center">
@@ -43,6 +44,7 @@ const App = () => {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/about" element={<About />} />
       </Routes>
+      <Footer />
     </Router>
   );
 };
