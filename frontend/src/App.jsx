@@ -9,10 +9,19 @@ import { Toaster } from 'sonner';
 import Navbar from './components/shared/Navbar';
 import SignIn from './components/pages/Authentication/SignIn';
 import SignUp from './components/pages/Authentication/Signup';
+import Home from './components/pages/General/Home';
 
-const Home = () => <div className="p-6 text-center"><h2 className="text-3xl font-semibold">Home</h2></div>;
-const Skills = () => <div className="p-6 text-center"><h2 className="text-3xl font-semibold">Skills</h2></div>;
-const About = () => <div className="p-6 text-center"><h2 className="text-3xl font-semibold">About</h2></div>;
+const Skills = () => (
+  <div className="p-6 text-center">
+    <h2 className="text-3xl font-semibold">Skills</h2>
+  </div>
+);
+
+const About = () => (
+  <div className="p-6 text-center">
+    <h2 className="text-3xl font-semibold">About</h2>
+  </div>
+);
 
 const App = () => {
   const dispatch = useDispatch();
@@ -30,7 +39,7 @@ const App = () => {
     <Router>
       <Toaster position="top-center" richColors />
 
-      <Navbar isLoggedIn={!!user} />
+      <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/skills" element={<Skills />} />

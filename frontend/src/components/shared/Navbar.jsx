@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { setUser } from '@/redux/authSlice';
+import { setUser } from '../../redux/authSlice'; // Adjusted to relative import
 import { toast } from 'sonner';
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const user = useSelector(state => state.auth.user);
+  const user = useSelector((state) => state.auth.user);
   const isLoggedIn = !!user;
 
   const navItems = [
@@ -22,31 +22,33 @@ const Navbar = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     dispatch(setUser(null));
-    toast.success("Logged out successfully!");
+    toast.success('Logged out successfully!');
     navigate('/signin');
   };
+
+  const renderNavLink = (item) => (
+    <Link
+      key={item.name}
+      to={item.href}
+      onClick={() => setMenuOpen(false)}
+      className="text-gray-600 hover:text-indigo-600 transition font-medium"
+    >
+      {item.name}
+    </Link>
+  );
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="text-2xl font-bold text-gray-800">
+          <Link to="/" className="text-2xl font-bold text-gray-800">
             Swap<span className="text-indigo-600">IT</span>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className="text-gray-600 hover:text-indigo-600 transition font-medium"
-              >
-                {item.name}
-              </Link>
-            ))}
-
+            {navItems.map(renderNavLink)}
             {isLoggedIn ? (
               <button
                 onClick={handleLogout}
@@ -69,6 +71,7 @@ const Navbar = () => {
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="text-gray-700 focus:outline-none"
+              aria-label="Toggle Menu"
             >
               {menuOpen ? <X size={28} /> : <Menu size={28} />}
             </button>
@@ -83,13 +86,12 @@ const Navbar = () => {
             <Link
               key={item.name}
               to={item.href}
-              className="block text-gray-700 hover:text-indigo-600 transition font-medium"
               onClick={() => setMenuOpen(false)}
+              className="block text-gray-700 hover:text-indigo-600 transition font-medium"
             >
               {item.name}
             </Link>
           ))}
-
           {isLoggedIn ? (
             <button
               onClick={() => {
@@ -103,8 +105,8 @@ const Navbar = () => {
           ) : (
             <Link
               to="/signin"
-              className="block px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold text-center"
               onClick={() => setMenuOpen(false)}
+              className="block px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold text-center"
             >
               Sign In
             </Link>
