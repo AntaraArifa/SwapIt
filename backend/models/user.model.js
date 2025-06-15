@@ -14,22 +14,25 @@ const userSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    password:{
-        type:String,
-        required:true,
+    password: {
+        type: String,
+        required: true,
     },
-    role:{
-        type:String,
-        enum:['teacher','learner'],
-        required:true
+    role: {
+        type: String,
+        enum: ['teacher', 'learner'],
+        required: true
     },
-    profile:{
-        bio:{type:String},
-        skills:[{type:String}],
-        profilePhoto:{
-            type:String,
-            default:""
-        }
-    },
-},{timestamps:true});
+    profile: {
+        type: {
+            bio: { type: String, default: "" },
+            skills: { type: [String], default: [] },
+            profilePhoto: { type: String, default: "" },
+            resume: { type: String, default: "" },
+            resumeOriginalName: { type: String, default: "" }
+        },
+        default: {}
+    }
+
+}, { timestamps: true });
 export const User = mongoose.model('User', userSchema);

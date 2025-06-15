@@ -4,36 +4,30 @@ import jwt from "jsonwebtoken";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
 
+// Register Controller
 export const register = async (req, res) => {
   try {
-    console.log("BODY:", req.body);
-    console.log("FILE:", req.file);
-
     const { fullname, email, phoneNumber, password, role } = req.body;
 
-    // Detailed field-by-field validation
-    if (!fullname) return res.status(400).json({ message: "Missing fullname", success: false });
-    if (!email) return res.status(400).json({ message: "Missing email", success: false });
-    if (!phoneNumber) return res.status(400).json({ message: "Missing phoneNumber", success: false });
-    if (!password) return res.status(400).json({ message: "Missing password", success: false });
-    if (!role) return res.status(400).json({ message: "Missing role", success: false });
+    // Basic validations
+    if (!fullname || !email || !phoneNumber || !password || !role) {
+      return res.status(400).json({ message: "Missing required fields", success: false });
+    }
 
-    if (!req.file) {
+    const profilePic = req.files?.profilePhoto?.[0];
+    if (!profilePic) {
       return res.status(400).json({ message: "Avatar file is missing", success: false });
     }
 
-    const fileUri = getDataUri(req.file);
-    const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists with this email.",
-        success: false,
-      });
+      return res.status(400).json({ message: "User already exists with this email", success: false });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    const fileUri = getDataUri(profilePic);
+    const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
 
     await User.create({
       fullname,
@@ -46,45 +40,29 @@ export const register = async (req, res) => {
       },
     });
 
-    return res.status(201).json({
-      message: "Account created successfully.",
-      success: true,
-    });
+    return res.status(201).json({ message: "Account created successfully", success: true });
   } catch (error) {
     console.error("Register error:", error);
     return res.status(500).json({ message: "Internal server error", success: false });
   }
 };
 
+// Login Controller
 export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
-    if (!email) return res.status(400).json({ message: "Missing email", success: false });
-    if (!password) return res.status(400).json({ message: "Missing password", success: false });
-    if (!role) return res.status(400).json({ message: "Missing role", success: false });
-
-    let user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({
-        message: "Incorrect email or password.",
-        success: false,
-      });
+    if (!email || !password || !role) {
+      return res.status(400).json({ message: "Missing email, password, or role", success: false });
     }
 
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatch) {
-      return res.status(400).json({
-        message: "Incorrect email or password.",
-        success: false,
-      });
+    const user = await User.findOne({ email });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({ message: "Incorrect email or password", success: false });
     }
 
     if (role !== user.role) {
-      return res.status(400).json({
-        message: "Account doesn't exist with current role.",
-        success: false,
-      });
+      return res.status(400).json({ message: "Account doesn't exist with current role", success: false });
     }
 
     const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
@@ -118,47 +96,51 @@ export const login = async (req, res) => {
   }
 };
 
+// Logout Controller
 export const logout = async (req, res) => {
   try {
     return res
       .status(200)
       .cookie("token", "", { maxAge: 0 })
-      .json({
-        message: "Logged out successfully.",
-        success: true,
-      });
+      .json({ message: "Logged out successfully", success: true });
   } catch (error) {
     console.error("Logout error:", error);
     return res.status(500).json({ message: "Internal server error", success: false });
   }
 };
 
+// Update Profile Controller
 export const updateProfile = async (req, res) => {
   try {
     const { fullname, email, phoneNumber, bio, skills } = req.body;
-    const file = req.file;
+    const resume = req.files?.file?.[0];
+    const profilePic = req.files?.profilePhoto?.[0];
 
-    const userId = req.id; // Auth middleware must set this
+    const userId = req.id;
     let user = await User.findById(userId);
-
     if (!user) {
-      return res.status(400).json({
-        message: "User not found.",
-        success: false,
-      });
+      return res.status(400).json({ message: "User not found", success: false });
     }
+
+    if (!user.profile) user.profile = {};
 
     if (fullname) user.fullname = fullname;
     if (email) user.email = email;
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (bio) user.profile.bio = bio;
-    if (skills) user.profile.skills = skills.split(",");
+    if (skills) user.profile.skills = skills.split(',').map(s => s.trim());
 
-    if (file) {
-      const fileUri = getDataUri(file);
+    if (resume) {
+      const fileUri = getDataUri(resume);
       const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
       user.profile.resume = cloudResponse.secure_url;
-      user.profile.resumeOriginalName = file.originalname;
+      user.profile.resumeOriginalName = resume.originalname;
+    }
+
+    if (profilePic) {
+      const fileUri = getDataUri(profilePic);
+      const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+      user.profile.profilePhoto = cloudResponse.secure_url;
     }
 
     await user.save();
@@ -173,7 +155,7 @@ export const updateProfile = async (req, res) => {
     };
 
     return res.status(200).json({
-      message: "Profile updated successfully.",
+      message: "Profile updated successfully",
       user: updatedUser,
       success: true,
     });

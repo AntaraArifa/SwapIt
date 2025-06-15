@@ -11,6 +11,7 @@ import SignIn from './components/pages/Authentication/SignIn';
 import SignUp from './components/pages/Authentication/Signup';
 import Home from './components/pages/General/Home';
 import About from './components/pages/General/About';
+import Profile from './components/pages/General/Profile';
 import Footer from './components/shared/Footer';
 
 const Skills = () => (
@@ -40,9 +41,9 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/about" element={<About />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/about" element={<About />} />
       </Routes>
       <Footer />
     </Router>
