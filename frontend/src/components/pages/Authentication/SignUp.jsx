@@ -20,7 +20,7 @@ const SignUp = () => {
     e.preventDefault();
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
-    formData.append("file", file);
+    formData.append("profilePhoto", file);
 
     try {
       const res = await fetch("http://localhost:3000/api/v1/user/register", {
