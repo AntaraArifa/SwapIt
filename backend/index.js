@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import connectDB from "./utils/db.js";
 import userRoutes from "./routes/user.route.js"; // ✅ You forgot this import
+import skillRoutes from "./routes/skillRoutes.js"; // Example for skills route
+
 
 // Initialize environment variables
 dotenv.config();
@@ -26,6 +28,12 @@ app.use(cors(corsOptions));
 
 // ✅ MOUNT YOUR ROUTES HERE!
 app.use('/api/v1/user', userRoutes); // 🔥 This is what was missing!
+
+// Import other routes as needed
+
+app.use('/api/v1/skills', skillRoutes); // Example for skills route
+
+
 
 // Basic route for testing
 app.get("/", (req, res) => {
