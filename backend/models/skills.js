@@ -4,10 +4,14 @@ import mongoose from 'mongoose';
 
 const skillSchema = new mongoose.Schema(
 {
+    userID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User', // reference to the User model
+        required: true,    
+    },
     name: {
         type: String,
         required: true,
-        unique: true,
         trim: true,
     },
     description: {
@@ -21,6 +25,23 @@ const skillSchema = new mongoose.Schema(
     tags: [{
         type: String,
     },],
+    level: {
+        type: String,
+        enum: ['Beginner', 'Intermediate', 'Advanced'],
+        default: 'Beginner',
+    },
+    experience: {
+        type: Number,
+        default: 0, // years of experience
+    },
+    AvgRating: {
+        type: Number,
+        default: 0, // average rating
+    },
+    ratingsCount: {
+        type: Number,
+        default: 0, // number of ratings
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', // optional: if an admin or teacher created it
