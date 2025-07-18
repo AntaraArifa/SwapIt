@@ -31,12 +31,15 @@ export const createSkill = async (req, res) => {
             tags,
             level,
             experience,
-            // AvgRating and ratingsCount will default to 0 as per schema
             // createdBy can be added if needed
         });
 
         await newSkill.save();
-        return res.status(201).json({ message: "Skill created successfully", success: true, skill: newSkill });
+        
+        // Populate user details to get full name
+        const populatedSkill = await Skill.findById(newSkill._id).populate('userID', 'fullname email');
+        
+        return res.status(201).json({ message: "Skill created successfully", success: true, skill: populatedSkill });
     } catch (error) {
         console.error(error);
         // Handle mongoose validation errors
@@ -86,7 +89,11 @@ export const updateSkill = async (req, res) => {
         if (experience !== undefined) skill.experience = experience;
 
         await skill.save();
-        return res.status(200).json({ message: "Skill updated successfully", success: true, skill });
+        
+        // Populate user details to get full name
+        const populatedSkill = await Skill.findById(skill._id).populate('userID', 'fullname email');
+        
+        return res.status(200).json({ message: "Skill updated successfully", success: true, skill: populatedSkill });
     } catch (error) {
         console.error(error);
         // Handle mongoose validation errors
@@ -119,7 +126,7 @@ export const deleteSkill = async (req, res) => {
 export const getSkills = async (req, res) => {
     try {
         const userId = req.user.userId; // Get userId from authenticated user
-        const skills = await Skill.find({ userID: userId }).populate('userID', 'name email'); // Populate user details if needed
+        const skills = await Skill.find({ userID: userId }).populate('userID', 'fullname email'); // Populate user details if needed
         const count = skills.length; // Get the count of skills
         return res.status(200).json({ 
             message: "Skills retrieved successfully", 
@@ -137,7 +144,7 @@ export const getSkills = async (req, res) => {
 export const getAllSkillsByUser = async (req, res) => {
     try {
         const userId = req.params.userId; // Get userId from request parameters
-        const skills = await Skill.find({ userID: userId }).populate('userID', 'name email'); // Populate user details if needed
+        const skills = await Skill.find({ userID: userId }).populate('userID', 'fullname email'); // Populate user details if needed
         const count = skills.length; // Get the count of skills
         return res.status(200).json({ 
             message: "Skills retrieved successfully", 
@@ -157,7 +164,7 @@ export const getSkillById = async (req, res) => {
         const { skillId } = req.params;
         const userId = req.user.userId; // Get userId from authenticated user
 
-        const skill = await Skill.findOne({ _id: skillId, userID: userId }).populate('userID', 'name email');
+        const skill = await Skill.findOne({ _id: skillId, userID: userId }).populate('userID', 'fullname email');
         if (!skill) {
             return res.status(404).json({ message: "Skill not found", success: false });
         }

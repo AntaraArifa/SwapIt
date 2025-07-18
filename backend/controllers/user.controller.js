@@ -88,6 +88,7 @@ export const login = async (req, res) => {
       .json({
         message: `Welcome back ${user.fullname}`,
         user: safeUser,
+        token: token, // ✅ Added token to response body
         success: true,
       });
   } catch (error) {
