@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
 import { Star, MessageCircle } from "lucide-react"
+import MarkdownRenderer from "./MarkdownRenderer"
 
 const SkillCard = ({ skill }) => {
   const getProficiencyColor = (proficiency) => {
@@ -13,6 +14,24 @@ const SkillCard = ({ skill }) => {
       default:
         return "bg-gray-100 text-gray-800"
     }
+  }
+
+  const truncateToWords = (text, wordLimit = 50) => {
+    if (!text) return ""
+    
+    // Remove headers (lines starting with #) but keep everything else
+    const lines = text.split('\n')
+    const contentWithoutHeaders = lines
+      .filter(line => !line.trim().startsWith('#'))
+      .join('\n')
+      .trim()
+    
+    if (!contentWithoutHeaders) return ""
+    
+    // Truncate to word limit
+    const words = contentWithoutHeaders.split(/\s+/)
+    if (words.length <= wordLimit) return contentWithoutHeaders
+    return words.slice(0, wordLimit).join(" ") + "..."
   }
 
   return (
@@ -65,7 +84,12 @@ const SkillCard = ({ skill }) => {
         </div>
 
         {/* Description */}
-        <p className="text-sm text-gray-600 mb-4 text-justify line-clamp-3">{skill.description}</p>
+        <div className="mb-4">
+          <MarkdownRenderer 
+            content={truncateToWords(skill.description, 50)} 
+            className="text-sm text-gray-600 leading-relaxed line-clamp-3 text-justify [&>div]:text-sm [&_*]:text-sm [&_*]:text-gray-600 [&_*]:leading-relaxed [&_*]:mb-1 [&_strong]:font-medium"
+          />
+        </div>
 
         {/* Instructor Info */}
         <div className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg">

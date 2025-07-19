@@ -145,7 +145,7 @@ export const getSkillListingById = async (req, res) => {
         // Check if listing exists
         const listing = await SkillListing.findById(listingID)
             .populate('teacherID', 'fullname email profile.profilePhoto')
-            .populate('skillID', 'name');
+            .populate('skillID', 'name tags level experience');
         if (!listing) {
             return res.status(404).json({ message: "Listing not found", success: false });
         }

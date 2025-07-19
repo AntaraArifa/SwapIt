@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { Star, BookOpen, MessageCircle, Calendar, Award } from "lucide-react"
+import MarkdownRenderer from "./MarkdownRenderer"
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api"
 
 const SkillDetails = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [skill, setSkill] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -156,10 +158,20 @@ const SkillDetails = () => {
         {/* Main Content */}
         <div className="lg:col-span-2">
           {/* Skill Header */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="mb-4">
-              <div className="flex items-start justify-between mb-4">
-                <h1 className="text-3xl font-bold text-gray-900">{skill.title}</h1>
+          <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+            {/* Full Card Image with Overlay Content */}
+            <div className="relative h-80 bg-gray-200">
+              <img
+                src={skill.listingImgURL || "/placeholder.svg?height=300&width=600"}
+                alt={skill.title}
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Dark gradient overlay for better text visibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+              
+              {/* Proficiency Badge on top-right corner */}
+              <div className="absolute top-4 right-4">
                 <span
                   className={`px-3 py-1 text-sm font-medium rounded-full ${getProficiencyColor(skill.proficiency)}`}
                 >
@@ -167,56 +179,43 @@ const SkillDetails = () => {
                 </span>
               </div>
 
-              <div className="flex items-center gap-4 mb-4">
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                  {skill.skillID?.name || 'Unknown Category'}
-                </span>
-                <div className="flex items-center gap-1">
-                  {skill.avgRating > 0 ? (
-                    <>
-                      <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                      <span className="font-semibold text-lg text-gray-900">{skill.avgRating}</span>
-                      <span className="text-gray-600">(0 reviews)</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-600">No reviews yet</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Instructor Info */}
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                {skill.teacherID?.profile?.profilePhoto ? (
-                  <img
-                    src={skill.teacherID.profile.profilePhoto}
-                    alt={skill.teacherID.fullname || 'Instructor'}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-lg font-semibold text-gray-600">
-                    {skill.teacherID?.fullname
-                      ? skill.teacherID.fullname
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                      : '??'}
+              {/* Title and Tags on bottom-left corner */}
+              <div className="absolute bottom-4 left-4 right-4">
+                <div className="flex items-end justify-between">
+                  <div className="flex-1">
+                    {/* Title */}
+                    <h1 className="text-3xl font-bold text-white mb-3 drop-shadow-lg">{skill.title}</h1>
+                    
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2">
+                      {skill.skillID?.tags && skill.skillID.tags.length > 0 ? (
+                        skill.skillID.tags.map((tag, index) => (
+                          <span key={index} className="px-3 py-1 bg-white/90 text-gray-800 text-sm rounded-full backdrop-blur-sm">
+                            {tag}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="px-3 py-1 bg-white/90 text-gray-800 text-sm rounded-full backdrop-blur-sm">
+                          No tags
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
-                <div>
-                  <p className="font-semibold text-gray-900">{skill.teacherID?.fullname || 'Unknown Instructor'}</p>
-                  <p className="text-sm text-gray-600">Instructor</p>
-                  <p className="text-xs text-gray-500">{skill.teacherID?.email || 'No email available'}</p>
+
+                  {/* Rating on bottom-right corner */}
+                  <div className="flex items-center gap-1 ml-4">
+                    {skill.avgRating > 0 ? (
+                      <>
+                        <Star className="h-5 w-5 fill-yellow-400 text-yellow-400 drop-shadow-lg" />
+                        <span className="font-semibold text-lg text-white drop-shadow-lg">{skill.avgRating}</span>
+                        <span className="text-white/80 drop-shadow-lg">(0 reviews)</span>
+                      </>
+                    ) : (
+                      <span className="text-white/80 drop-shadow-lg">No reviews yet</span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Skill Image */}
-            <div className="h-64 bg-gray-200 rounded-lg overflow-hidden mb-6">
-              <img
-                src={skill.listingImgURL || "/placeholder.svg?height=300&width=600"}
-                alt={skill.title}
-                className="w-full h-full object-cover"
-              />
             </div>
           </div>
 
@@ -226,7 +225,6 @@ const SkillDetails = () => {
               <nav className="flex">
                 {[
                   { id: "overview", label: "Overview", icon: BookOpen },
-                  { id: "curriculum", label: "Curriculum", icon: Award },
                   { id: "reviews", label: "Reviews", icon: Star },
                 ].map((tab) => (
                   <button
@@ -248,29 +246,11 @@ const SkillDetails = () => {
             <div className="p-6">
               {selectedTab === "overview" && (
                 <div>
-                  <h3 className="text-xl font-semibold mb-4 text-gray-900">Course Description</h3>
-                  <p className="text-gray-600 leading-relaxed mb-6">{skill.description}</p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold mb-3 text-gray-900">What You'll Learn</h4>
-                      <ul className="space-y-2 text-sm text-gray-600">
-                        <li>• Master the fundamentals and advanced concepts</li>
-                        <li>• Build real-world projects</li>
-                        <li>• Get personalized feedback and guidance</li>
-                        <li>• Access to learning resources and materials</li>
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold mb-3 text-gray-900">Prerequisites</h4>
-                      <ul className="space-y-2 text-sm text-gray-600">
-                        <li>• Basic computer skills</li>
-                        <li>• Enthusiasm to learn</li>
-                        <li>• No prior experience required</li>
-                      </ul>
-                    </div>
-                  </div>
+                  <h2 className="text-xl font-semibold mb-4 text-gray-900">Course Description</h2>
+                  <MarkdownRenderer 
+                    content={skill.description} 
+                    className="mb-6 text-gray-600 leading-relaxed"
+                  />
                 </div>
               )}
 
@@ -315,7 +295,7 @@ const SkillDetails = () => {
           {/* Pricing Card */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="text-center mb-6">
-              <span className="text-3xl font-bold text-gray-900">${skill.fee}</span>
+              <span className="text-3xl font-bold text-gray-900">Taka {skill.fee}</span>
               <span className="text-lg text-gray-600">/session</span>
             </div>
             <div className="space-y-3">
@@ -340,7 +320,17 @@ const SkillDetails = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Category</span>
-                <span className="font-medium text-gray-900">{skill.skillID?.name || 'Unknown Category'}</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {skill.skillID?.tags && skill.skillID.tags.length > 0 ? (
+                    skill.skillID.tags.map((tag, index) => (
+                      <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="font-medium text-gray-900">No tags</span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Session Duration</span>
@@ -375,10 +365,37 @@ const SkillDetails = () => {
               )}
               <div>
                 <p className="font-semibold text-gray-900">{skill.teacherID?.fullname || 'Unknown Instructor'}</p>
-                <p className="text-sm text-gray-600">Experienced Instructor</p>
+                <p className="text-sm text-gray-600">Instructor</p>
+                {/* <p className="text-xs text-gray-500">{skill.teacherID?.email || 'No email available'}</p> */}
               </div>
             </div>
-            <button className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50">
+            
+            {/* Instructor Details */}
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Skill</span>
+                <span className="text-sm font-medium text-gray-900 break-all">
+                  {skill.skillID?.name || 'Not available'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Experience</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {skill.skillID?.experience ? `${skill.skillID.experience} years+` : 'Not specified'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Level</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {skill.skillID?.level || 'Not specified'}
+                </span>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => navigate('/profile')}
+              className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
               View Instructor Profile
             </button>
           </div>
