@@ -1,17 +1,140 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "react-router-dom"
 import { Star, BookOpen, MessageCircle, Calendar, Award } from "lucide-react"
-import { mockSkillListings } from "../data/mockData"
+import { buildApiUrl, API_ENDPOINTS } from "../../config/api"
 
 const SkillDetails = () => {
   const { id } = useParams()
-  const skill = mockSkillListings.find((s) => s._id === id)
+  const [skill, setSkill] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedTab, setSelectedTab] = useState("overview")
 
+  // Fetch skill details from API
+  useEffect(() => {
+    const fetchSkillDetails = async () => {
+      try {
+        setLoading(true)
+        
+        // Get token from cookies
+        const getCookie = (name) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+          return null;
+        };
+        
+        const token = getCookie('token');
+        
+        const headers = {
+          'Content-Type': 'application/json',
+        }
+        
+        // Add authorization header if token exists
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
+
+        const apiUrl = buildApiUrl(API_ENDPOINTS.LISTINGS.BY_ID(id))
+
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: headers,
+          credentials: 'include'
+        })
+        
+        if (!response.ok) {
+          // Try to get the error message from the response
+          const errorData = await response.json().catch(() => ({}))
+          
+          if (response.status === 401) {
+            throw new Error('Authentication required. Please sign in to view skill details.')
+          } else if (response.status === 404) {
+            throw new Error('Skill not found. This skill may have been removed or the ID is incorrect.')
+          } else if (response.status === 403) {
+            throw new Error('Access denied. You may not have permission to view this skill.')
+          } else {
+            const errorMessage = errorData.message || `Failed to fetch skill details (${response.status})`
+            throw new Error(errorMessage)
+          }
+        }
+        
+        const data = await response.json()
+        
+        if (data.success) {
+          setSkill(data.listing)
+        } else {
+          throw new Error(data.message || 'Failed to fetch skill details')
+        }
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (id) {
+      fetchSkillDetails()
+    } else {
+      setLoading(false)
+      setError('No skill ID provided')
+    }
+  }, [id])
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading skill details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h3 className="text-xl font-semibold mb-2 text-gray-900">Error Loading Skill</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="flex gap-2 justify-center">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+            {error.includes('Authentication required') && (
+              <a 
+                href="/signin" 
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Sign In
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Skill not found
   if (!skill) {
-    return <div className="container mx-auto px-4 py-8">Skill not found</div>
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">🔍</div>
+          <h3 className="text-xl font-semibold mb-2 text-gray-900">Skill Not Found</h3>
+          <p className="text-gray-600">The skill you're looking for doesn't exist or has been removed.</p>
+        </div>
+      </div>
+    )
   }
 
   const getProficiencyColor = (proficiency) => {
@@ -45,7 +168,9 @@ const SkillDetails = () => {
               </div>
 
               <div className="flex items-center gap-4 mb-4">
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">{skill.skillID.name}</span>
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                  {skill.skillID?.name || 'Unknown Category'}
+                </span>
                 <div className="flex items-center gap-1">
                   {skill.avgRating > 0 ? (
                     <>
@@ -61,16 +186,26 @@ const SkillDetails = () => {
 
               {/* Instructor Info */}
               <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-lg font-semibold text-gray-600">
-                  {skill.teacherID.fullname
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </div>
+                {skill.teacherID?.profile?.profilePhoto ? (
+                  <img
+                    src={skill.teacherID.profile.profilePhoto}
+                    alt={skill.teacherID.fullname || 'Instructor'}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-lg font-semibold text-gray-600">
+                    {skill.teacherID?.fullname
+                      ? skill.teacherID.fullname
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                      : '??'}
+                  </div>
+                )}
                 <div>
-                  <p className="font-semibold text-gray-900">{skill.teacherID.fullname}</p>
+                  <p className="font-semibold text-gray-900">{skill.teacherID?.fullname || 'Unknown Instructor'}</p>
                   <p className="text-sm text-gray-600">Instructor</p>
-                  <p className="text-xs text-gray-500">{skill.teacherID.email}</p>
+                  <p className="text-xs text-gray-500">{skill.teacherID?.email || 'No email available'}</p>
                 </div>
               </div>
             </div>
@@ -205,7 +340,7 @@ const SkillDetails = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Category</span>
-                <span className="font-medium text-gray-900">{skill.skillID.name}</span>
+                <span className="font-medium text-gray-900">{skill.skillID?.name || 'Unknown Category'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Session Duration</span>
@@ -222,14 +357,24 @@ const SkillDetails = () => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-900">About the Instructor</h3>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-lg font-semibold text-gray-600">
-                {skill.teacherID.fullname
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </div>
+              {skill.teacherID?.profile?.profilePhoto ? (
+                <img
+                  src={skill.teacherID.profile.profilePhoto}
+                  alt={skill.teacherID.fullname || 'Instructor'}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-lg font-semibold text-gray-600">
+                  {skill.teacherID?.fullname
+                    ? skill.teacherID.fullname
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                    : '??'}
+                </div>
+              )}
               <div>
-                <p className="font-semibold text-gray-900">{skill.teacherID.fullname}</p>
+                <p className="font-semibold text-gray-900">{skill.teacherID?.fullname || 'Unknown Instructor'}</p>
                 <p className="text-sm text-gray-600">Experienced Instructor</p>
               </div>
             </div>

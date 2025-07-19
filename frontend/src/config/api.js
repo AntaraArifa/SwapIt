@@ -5,7 +5,7 @@ const API_CONFIG = {
     // Skill Listings
     LISTINGS: {
       ALL: '/listings/all',
-      BY_ID: (id) => `/listings/${id}`,
+      BY_ID: (id) => `/listings/single/${id}`,
       TAGS: '/listings/tags',
     },
     // User Authentication
