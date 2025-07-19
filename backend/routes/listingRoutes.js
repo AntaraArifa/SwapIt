@@ -16,10 +16,9 @@ router.get('/all', isAuthenticated, skillListingController.getAllSkillListings);
 router.get('/single/:id', isAuthenticated, skillListingController.getSkillListingById);
 // Get skill listings by teacher ID
 router.get('/teacher/:teacherId', isAuthenticated, skillListingController.getSkillListingsByTeacherId);
+// Get tags for skill listings
+router.get('/tags', isAuthenticated, skillListingController.getAllTagsFromListings);
 // Get skill listings by tag
-router.get('/:tag', isAuthenticated, skillListingController.getSkillListingsByTag);
-
-
-
+router.get('/tag/:tag', isAuthenticated, skillListingController.getSkillListingsByTag);
 
 export default router;
