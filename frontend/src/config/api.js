@@ -6,6 +6,7 @@ const API_CONFIG = {
     LISTINGS: {
       ALL: '/listings/all',
       BY_ID: (id) => `/listings/${id}`,
+      TAGS: '/listings/tags',
     },
     // User Authentication
     AUTH: {

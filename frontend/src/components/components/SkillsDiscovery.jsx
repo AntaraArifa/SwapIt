@@ -20,13 +20,14 @@ const SkillsDiscovery = () => {
   })
   const [allSkills, setAllSkills] = useState([])
   const [filteredSkills, setFilteredSkills] = useState([])
+  const [skillTags, setSkillTags] = useState([])
   const [showFilters, setShowFilters] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Fetch skills from API
+  // Fetch skills and tags from API
   useEffect(() => {
-    const fetchSkills = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true)
         
@@ -48,37 +49,56 @@ const SkillsDiscovery = () => {
         if (token) {
           headers['Authorization'] = `Bearer ${token}`
         }
-        
-        const response = await fetch(buildApiUrl(API_ENDPOINTS.LISTINGS.ALL), {
+
+        const fetchOptions = {
           method: 'GET',
           headers: headers,
-          credentials: 'include' // Include cookies in the request
-        })
+          credentials: 'include'
+        }
+
+        // Fetch both skills and tags in parallel
+        const [skillsResponse, tagsResponse] = await Promise.all([
+          fetch(buildApiUrl(API_ENDPOINTS.LISTINGS.ALL), fetchOptions),
+          fetch(buildApiUrl(API_ENDPOINTS.LISTINGS.TAGS), fetchOptions)
+        ])
         
-        if (!response.ok) {
-          if (response.status === 401) {
+        if (!skillsResponse.ok) {
+          if (skillsResponse.status === 401) {
             throw new Error('Authentication required. Please sign in to view skills.')
           }
           throw new Error('Failed to fetch skills')
         }
+
+        if (!tagsResponse.ok) {
+          throw new Error('Failed to fetch tags')
+        }
         
-        const data = await response.json()
+        const [skillsData, tagsData] = await Promise.all([
+          skillsResponse.json(),
+          tagsResponse.json()
+        ])
         
-        if (data.success) {
-          setAllSkills(data.listings)
-          setFilteredSkills(data.listings)
+        if (skillsData.success) {
+          setAllSkills(skillsData.listings)
+          setFilteredSkills(skillsData.listings)
         } else {
-          throw new Error(data.message || 'Failed to fetch skills')
+          throw new Error(skillsData.message || 'Failed to fetch skills')
+        }
+
+        if (tagsData.success) {
+          setSkillTags(tagsData.tags)
+        } else {
+          throw new Error(tagsData.message || 'Failed to fetch tags')
         }
       } catch (err) {
         setError(err.message)
-        console.error('Error fetching skills:', err)
+        console.error('Error fetching data:', err)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchSkills()
+    fetchData()
   }, [])
 
   // Filter and sort skills
@@ -90,15 +110,19 @@ const SkillsDiscovery = () => {
       filtered = filtered.filter(
         (skill) =>
           skill.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          skill.skillID.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          skill.skillID.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
           skill.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
           skill.teacherID.fullname.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     }
 
-    // Filter by category
+    // Filter by category (now using tags)
     if (selectedCategory !== "all") {
-      filtered = filtered.filter((skill) => skill.category === selectedCategory)
+      filtered = filtered.filter((skill) => 
+        skill.skillID.tags && skill.skillID.tags.some(tag => 
+          tag.toLowerCase() === selectedCategory.toLowerCase()
+        )
+      )
     }
 
     // Filter by rating
@@ -202,7 +226,7 @@ const SkillsDiscovery = () => {
 
           {/* Skill Categories */}
           <SkillCategories
-            categories={skillCategories}
+            categories={skillTags}
             selectedCategory={selectedCategory}
             onCategorySelect={setSelectedCategory}
           />
@@ -236,7 +260,7 @@ const SkillsDiscovery = () => {
                 <div>
                   <h2 className="text-2xl font-semibold text-gray-900">{filteredSkills.length} Skills Found</h2>
                   {selectedCategory !== "all" && (
-                    <p className="text-gray-600">in {skillCategories.find((cat) => cat.id === selectedCategory)?.name}</p>
+                    <p className="text-gray-600">in {selectedCategory}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">

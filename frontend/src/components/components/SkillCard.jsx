@@ -37,7 +37,18 @@ const SkillCard = ({ skill }) => {
           </div>
 
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">{skill.skillID.name}</span>
+            <div className="flex flex-wrap gap-1">
+              {skill.skillID.tags && skill.skillID.tags.slice(0, 4).map((tag, index) => (
+                <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {tag}
+                </span>
+              ))}
+              {skill.skillID.tags && skill.skillID.tags.length > 4 && (
+                <span className="px-2 py-1 border border-gray-300 text-gray-600 text-xs rounded-full">
+                  +{skill.skillID.tags.length - 4} more
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-1 mb-3">

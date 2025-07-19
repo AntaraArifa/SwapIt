@@ -123,7 +123,7 @@ export const deleteSkillListing = async (req, res) => {
 // Get all skill listings
 export const getAllSkillListings = async (req, res) => {
     try {
-        const listings = await SkillListing.find().populate('teacherID', 'fullname email profile.profilePhoto').populate('skillID', 'name');
+        const listings = await SkillListing.find().populate('teacherID', 'fullname email profile.profilePhoto').populate('skillID', 'tags');
         const count = listings.length; // Get the count of listings
         return res.status(200).json({ 
             message: "Skill listings retrieved successfully", 
@@ -220,3 +220,61 @@ export const getSkillListingsByTag = async (req, res) => {
     }
 };
 
+// Get all tags from skill listings with counts
+export const getAllTagsFromListings = async (req, res) => {
+    try {
+        const listings = await SkillListing.find().populate('skillID', 'tags');
+        const tagCounts = new Map();
+
+        listings.forEach(listing => {
+            if (listing.skillID && listing.skillID.tags) {
+                listing.skillID.tags.forEach(tag => {
+                    // Normalize tag by converting to lowercase for comparison
+                    const normalizedTag = tag.toLowerCase();
+                    
+                    // If we've seen this tag before (case-insensitive), increment count
+                    let existingEntry = null;
+                    for (let [existingTag, data] of tagCounts.entries()) {
+                        if (existingTag.toLowerCase() === normalizedTag) {
+                            existingEntry = existingTag;
+                            break;
+                        }
+                    }
+                    
+                    if (existingEntry) {
+                        // Increment count for existing tag
+                        tagCounts.get(existingEntry).count++;
+                    } else {
+                        // Use proper case version (capitalize first letter)
+                        const properCaseTag = tag.charAt(0).toUpperCase() + tag.slice(1).toLowerCase();
+                        tagCounts.set(properCaseTag, { count: 1 });
+                    }
+                });
+            }
+        });
+
+        // Convert Map to array with tag and count
+        const tagsWithCounts = Array.from(tagCounts.entries()).map(([tag, data]) => ({
+            tag: tag,
+            count: data.count
+        }));
+
+        // Sort by count (descending) then by tag name (ascending)
+        tagsWithCounts.sort((a, b) => {
+            if (b.count !== a.count) {
+                return b.count - a.count;
+            }
+            return a.tag.localeCompare(b.tag);
+        });
+
+        return res.status(200).json({
+            message: "Tags with counts retrieved successfully",
+            success: true,
+            tags: tagsWithCounts,
+            totalUniqueTags: tagsWithCounts.length
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Internal server error", success: false });
+    }
+};
