@@ -13,10 +13,12 @@ import Home from './components/pages/General/Home';
 import About from './components/pages/General/About';
 import Profile from './components/pages/General/Profile';
 import Footer from './components/shared/Footer';
+import SkillsDiscovery from './components/pages/Skills/page';
 
 const Skills = () => (
   <div className="p-6 text-center">
     <h2 className="text-3xl font-semibold">Skills</h2>
+    <SkillsDiscovery />
   </div>
 );
 
