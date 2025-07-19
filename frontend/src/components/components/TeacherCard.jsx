@@ -79,6 +79,14 @@ const TeacherCard = ({ teacher }) => {
             Contact
           </button>
         </div>
+
+        {/* Availability Indicator */}
+        {teacher.availability === "available" && (
+          <div className="mt-3 flex items-center gap-2 text-green-600 text-sm">
+            <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+            Available now
+          </div>
+        )}
       </div>
     </div>
   )

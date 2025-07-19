@@ -14,6 +14,7 @@ import About from './components/pages/General/About';
 import Profile from './components/pages/General/Profile';
 import Footer from './components/shared/Footer';
 import SkillsDiscovery from './components/pages/Skills/page';
+import SkillsDetails from './components/pages/Skills/[id]/page'
 
 const Skills = () => (
   <div className="p-6 text-center">
@@ -42,6 +43,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/skills" element={<Skills />} />
+        <Route path="/skills/:id" element={<SkillsDetails />} />
         <Route path="/about" element={<About />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/signin" element={<SignIn />} />

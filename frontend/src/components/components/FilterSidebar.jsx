@@ -1,5 +1,6 @@
 "use client"
-import { MapPin, DollarSign, Star, Clock } from "lucide-react"
+
+import { DollarSign, Star, Award } from "lucide-react"
 
 const FilterSidebar = ({ filters, onFiltersChange }) => {
   const updateFilter = (key, value) => {
@@ -8,21 +9,6 @@ const FilterSidebar = ({ filters, onFiltersChange }) => {
 
   return (
     <div className="space-y-6">
-      {/* Location Filter */}
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900">
-          <MapPin className="h-4 w-4" />
-          Location
-        </h3>
-        <input
-          type="text"
-          placeholder="Enter city or country"
-          value={filters.location}
-          onChange={(e) => updateFilter("location", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-
       {/* Price Range */}
       <div className="bg-white rounded-lg shadow-md p-4">
         <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900">
@@ -31,7 +17,7 @@ const FilterSidebar = ({ filters, onFiltersChange }) => {
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="text-sm text-gray-600">Up to ${filters.maxPrice}/hour</label>
+            <label className="text-sm text-gray-600">Up to ${filters.maxPrice}/session</label>
             <input
               type="range"
               min="5"
@@ -80,26 +66,26 @@ const FilterSidebar = ({ filters, onFiltersChange }) => {
         </div>
       </div>
 
-      {/* Availability Filter */}
+      {/* Proficiency Level Filter */}
       <div className="bg-white rounded-lg shadow-md p-4">
         <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900">
-          <Clock className="h-4 w-4" />
-          Availability
+          <Award className="h-4 w-4" />
+          Proficiency Level
         </h3>
         <div className="space-y-2">
           {[
-            { value: "any", label: "Any time" },
-            { value: "available", label: "Available now" },
-            { value: "today", label: "Available today" },
-            { value: "week", label: "Available this week" },
+            { value: "any", label: "Any Level" },
+            { value: "beginner", label: "Beginner" },
+            { value: "intermediate", label: "Intermediate" },
+            { value: "advanced", label: "Advanced" },
           ].map((option) => (
             <label key={option.value} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="availability"
+                name="proficiency"
                 value={option.value}
-                checked={filters.availability === option.value}
-                onChange={() => updateFilter("availability", option.value)}
+                checked={filters.proficiency === option.value}
+                onChange={() => updateFilter("proficiency", option.value)}
                 className="text-blue-600"
               />
               <span className="text-sm">{option.label}</span>

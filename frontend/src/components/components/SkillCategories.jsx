@@ -13,7 +13,7 @@ const SkillCategories = ({ categories, selectedCategory, onCategorySelect }) => 
               : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
           }`}
         >
-          All Categories
+          All Skills
         </button>
         {categories.map((category) => (
           <button
