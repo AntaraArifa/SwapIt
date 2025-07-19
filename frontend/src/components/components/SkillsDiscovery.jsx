@@ -234,7 +234,9 @@ const SkillsDiscovery = () => {
           <div className="flex gap-8">
             {/* Filter Sidebar */}
             <div className="hidden lg:block w-80">
-              <FilterSidebar filters={filters} onFiltersChange={setFilters} />
+              <div className="sticky top-20">
+                <FilterSidebar filters={filters} onFiltersChange={setFilters} />
+              </div>
             </div>
 
             {/* Main Content */}
