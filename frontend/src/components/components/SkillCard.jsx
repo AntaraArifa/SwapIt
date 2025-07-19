@@ -58,11 +58,21 @@ const SkillCard = ({ skill }) => {
 
         {/* Instructor Info */}
         <div className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
-          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
-            {skill.teacherID.fullname
-              .split(" ")
-              .map((n) => n[0])
-              .join("")}
+          <div className="w-8 h-8 rounded-full overflow-hidden">
+            {skill.teacherID.profile?.profilePhoto ? (
+              <img
+                src={skill.teacherID.profile.profilePhoto}
+                alt={skill.teacherID.fullname}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
+                {skill.teacherID.fullname
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </div>
+            )}
           </div>
           <div>
             <p className="text-sm font-medium text-gray-900">{skill.teacherID.fullname}</p>

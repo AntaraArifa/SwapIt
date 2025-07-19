@@ -37,7 +37,7 @@ export const createSkillListing = async (req, res) => {
         await newListing.save();
 
         // Populate teacher details to get full name
-        const populatedListing = await SkillListing.findById(newListing._id).populate('teacherID', 'fullname email');
+        const populatedListing = await SkillListing.findById(newListing._id).populate('teacherID', 'fullname email profile.profilePhoto');
 
         return res.status(201).json({ message: "Skill listing created successfully", success: true, listing: populatedListing });
     } 
@@ -123,7 +123,7 @@ export const deleteSkillListing = async (req, res) => {
 // Get all skill listings
 export const getAllSkillListings = async (req, res) => {
     try {
-        const listings = await SkillListing.find().populate('teacherID', 'fullname email').populate('skillID', 'name');
+        const listings = await SkillListing.find().populate('teacherID', 'fullname email profile.profilePhoto').populate('skillID', 'name');
         const count = listings.length; // Get the count of listings
         return res.status(200).json({ 
             message: "Skill listings retrieved successfully", 
@@ -144,7 +144,7 @@ export const getSkillListingById = async (req, res) => {
 
         // Check if listing exists
         const listing = await SkillListing.findById(listingID)
-            .populate('teacherID', 'fullname email')
+            .populate('teacherID', 'fullname email profile.profilePhoto')
             .populate('skillID', 'name');
         if (!listing) {
             return res.status(404).json({ message: "Listing not found", success: false });
@@ -204,7 +204,7 @@ export const getSkillListingsByTag = async (req, res) => {
 
         // Find listings that reference these skills
         const listings = await SkillListing.find({ skillID: { $in: skillIds } })
-            .populate('teacherID', 'fullname email')
+            .populate('teacherID', 'fullname email profile.profilePhoto')
             .populate('skillID', 'name tags');
             
         const count = listings.length; // Get the count of listings

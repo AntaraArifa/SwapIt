@@ -17,6 +17,7 @@ export const mockSkillListings = [
       _id: "687a79f66adacfd3ac553dde",
       fullname: "Abdul Kuddus",
       email: "akuddus@gmail.com",
+      profilePhoto: "https://res.cloudinary.com/dplknec2c/image/upload/v1752857077/z51lss9jvfwi3bkcoxtq.jpg"
     },
     skillID: {
       _id: "687a7a4a6adacfd3ac553dec",
@@ -39,6 +40,7 @@ export const mockSkillListings = [
       _id: "687a79f66adacfd3ac553ddf",
       fullname: "Sarah Johnson",
       email: "sarah.j@gmail.com",
+      profilePhoto: "https://res.cloudinary.com/dplknec2c/image/upload/v1752857077/z51lss9jvfwi3bkcoxtq.jpg"
     },
     skillID: {
       _id: "687a7a4a6adacfd3ac553ded",
@@ -60,6 +62,7 @@ export const mockSkillListings = [
       _id: "687a79f66adacfd3ac553de0",
       fullname: "Mike Chen",
       email: "mike.chen@gmail.com",
+      profilePhoto: "https://res.cloudinary.com/dplknec2c/image/upload/v1752857077/z51lss9jvfwi3bkcoxtq.jpg"
     },
     skillID: {
       _id: "687a7a4a6adacfd3ac553dee",
@@ -81,6 +84,7 @@ export const mockSkillListings = [
       _id: "687a79f66adacfd3ac553de1",
       fullname: "Maria Rodriguez",
       email: "maria.r@gmail.com",
+      profilePhoto: "https://res.cloudinary.com/dplknec2c/image/upload/v1752857077/z51lss9jvfwi3bkcoxtq.jpg"
     },
     skillID: {
       _id: "687a7a4a6adacfd3ac553def",
@@ -102,6 +106,7 @@ export const mockSkillListings = [
       _id: "687a79f66adacfd3ac553de2",
       fullname: "David Wilson",
       email: "david.w@gmail.com",
+      profilePhoto: "https://res.cloudinary.com/dplknec2c/image/upload/v1752857077/z51lss9jvfwi3bkcoxtq.jpg"
     },
     skillID: {
       _id: "687a7a4a6adacfd3ac553df0",
@@ -123,6 +128,7 @@ export const mockSkillListings = [
       _id: "687a79f66adacfd3ac553de3",
       fullname: "Jennifer Lee",
       email: "jennifer.l@gmail.com",
+      // profilePhoto: "https://res.cloudinary.com/dplknec2c/image/upload/v1752857077/z51lss9jvfwi3bkcoxtq.jpg"
     },
     skillID: {
       _id: "687a7a4a6adacfd3ac553df1",
