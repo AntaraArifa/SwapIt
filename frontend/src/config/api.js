@@ -7,6 +7,7 @@ const API_CONFIG = {
       ALL: '/listings/all',
       BY_ID: (id) => `/listings/single/${id}`,
       TAGS: '/listings/tags',
+      CREATE: '/listings/create',
     },
     // User Authentication
     AUTH: {
@@ -22,7 +23,8 @@ const API_CONFIG = {
     // Skills
     SKILLS: {
       ALL: '/skills/all',
-      BY_ID: (id) => `/skills/${id}`,
+      BY_ID: (id) => `/skills/user/${id}`,
+      CREATE: '/skills/create',
     }
   }
 }

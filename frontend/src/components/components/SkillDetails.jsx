@@ -246,7 +246,7 @@ const SkillDetails = () => {
             <div className="p-6">
               {selectedTab === "overview" && (
                 <div>
-                  <h2 className="text-xl font-semibold mb-4 text-gray-900">Course Description</h2>
+                  {/* <h2 className="text-xl font-semibold mb-4 text-gray-900">Course Description</h2> */}
                   <MarkdownRenderer 
                     content={skill.description} 
                     className="mb-6 text-gray-600 leading-relaxed"
