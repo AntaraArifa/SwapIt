@@ -25,7 +25,14 @@ const API_CONFIG = {
       ALL: '/skills/all',
       BY_ID: (id) => `/skills/user/${id}`,
       CREATE: '/skills/create',
-    }
+    },
+    // Session Management
+    SESSIONS: {
+      CREATE: '/sessions/create',
+      GET_ALL: '/sessions/user',
+      UPDATE_STATUS: (id) => `/sessions/${id}/status`, 
+      RESCHEDULE: (id) => `/sessions/${id}/reschedule`,
+}
   }
 }
 

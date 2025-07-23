@@ -17,6 +17,7 @@ import SkillsDiscovery from './components/pages/Skills/page';
 import SkillsDetails from './components/pages/Skills/[id]/page'
 import AddListing from './components/pages/Skills/AddListings';
 import AddSkills from './components/pages/Skills/AddSkills';
+import BookSessionForm from './components/components/SessionBookingForm';
 
 const Skills = () => (
   <div className="p-6 text-center">
@@ -52,6 +53,7 @@ const App = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/book-session/:skillId" element={<BookSessionForm />} />
         <Route path="*" element={<div className="text-center p-6">404 - Page Not Found</div>} />
       </Routes>
       <Footer />

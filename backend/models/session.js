@@ -16,21 +16,8 @@ const sessionSchema = new mongoose.Schema({
     ref: "SkillListing",
     required: true,
   },
-  scheduledDate: {
-    type: Date,
-    required: true,
-  },
-  duration: {
-    type: Number,
-    required: true,
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  timeZone: {
-    type: String,
+  scheduledTime: {
+    type: String, // e.g. '14:00'
     required: true,
   },
   status: {

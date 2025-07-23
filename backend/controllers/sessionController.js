@@ -5,25 +5,30 @@ import SkillListing from "../models/skillListing.js";
 export const createSession = async (req, res) => {
   try {
     const learnerID = req.user.userId;
-    const { teacherID, skillListingID, scheduledDate, duration, price, timeZone, note } = req.body;
+    const { teacherID, skillListingID, slot, note } = req.body;
 
     const skillListing = await SkillListing.findById(skillListingID);
     if (!skillListing) {
       return res.status(404).json({ message: "Skill listing not found", success: false });
+    }
+    // Check if requested slot exists in availableSlots
+    if (!slot || !skillListing.availableSlots.includes(slot)) {
+      return res.status(400).json({ message: "Selected time slot is not available", success: false });
     }
 
     const newSession = new Session({
       learnerID,
       teacherID,
       skillListingID,
-      scheduledDate,
-      duration,
-      price,
-      timeZone,
+      scheduledTime: slot, // store the selected time slot as scheduledTime
       note,
     });
 
     await newSession.save();
+
+    // Remove the booked slot from availableSlots
+    skillListing.availableSlots = skillListing.availableSlots.filter(s => s !== slot);
+    await skillListing.save();
 
     res.status(201).json({ message: "Session request sent", success: true, session: newSession });
   } catch (err) {
@@ -44,17 +49,13 @@ export const getUserSessions = async (req, res) => {
 
     if (status) filter.status = status;
 
-    if (startDate || endDate) {
-      filter.scheduledDate = {};
-      if (startDate) filter.scheduledDate.$gte = new Date(startDate);
-      if (endDate) filter.scheduledDate.$lte = new Date(endDate);
-    }
 
+    // Remove date filtering since scheduledTime is now a string (time only)
     const sessions = await Session.find(filter)
       .populate("teacherID", "fullname profile.profilePhoto")
       .populate("learnerID", "fullname profile.profilePhoto")
       .populate("skillListingID", "title")
-      .sort({ scheduledDate: 1 });
+      .sort({ createdAt: 1 });
 
     res.status(200).json({ message: "Sessions retrieved", success: true, sessions });
   } catch (err) {
@@ -98,7 +99,7 @@ export const updateSessionStatus = async (req, res) => {
 export const proposeReschedule = async (req, res) => {
   try {
     const sessionId = req.params.sessionId;
-    const { newDate, newDuration, newTimeZone } = req.body;
+    const { newTime } = req.body;
     const userId = req.user.userId;
 
     const session = await Session.findById(sessionId);
@@ -111,9 +112,7 @@ export const proposeReschedule = async (req, res) => {
     }
 
     session.rescheduleRequest = {
-      newDate,
-      newDuration,
-      newTimeZone,
+      newTime,
       requestedAt: new Date(),
     };
     session.status = "rescheduled";
@@ -148,9 +147,7 @@ export const respondReschedule = async (req, res) => {
     }
 
     if (accept) {
-      session.scheduledDate = session.rescheduleRequest.newDate;
-      session.duration = session.rescheduleRequest.newDuration || session.duration;
-      session.timeZone = session.rescheduleRequest.newTimeZone || session.timeZone;
+      session.scheduledTime = session.rescheduleRequest.newTime;
       session.status = "accepted";
     } else {
       session.status = "accepted"; // revert to accepted or original status
