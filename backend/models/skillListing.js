@@ -42,6 +42,10 @@ const skillListingSchema = new mongoose.Schema({
         type: String, // URL or path to the image
         default: '' // default to empty string if no image is provided
     },
+    availableSlots: {
+        type: [String], // Array of available slot strings (e.g., ISO date strings or time ranges)
+        default: []
+    }
 });
 
 const SkillListing = mongoose.model('SkillListing', skillListingSchema);

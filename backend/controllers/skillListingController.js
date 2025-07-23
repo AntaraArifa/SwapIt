@@ -5,7 +5,7 @@ import { User } from "../models/user.model.js";
 // Create a new skill listing
 export const createSkillListing = async (req, res) => {
     try {
-        const { title, description, fee, proficiency, skillID, listingImgURL } = req.body;
+        const { title, description, fee, proficiency, skillID, listingImgURL, availableSlots } = req.body;
         const teacherID = req.user.userId; // Get teacherID from authenticated user
 
         // Validate fee
@@ -31,7 +31,8 @@ export const createSkillListing = async (req, res) => {
             proficiency,
             skillID,
             teacherID, 
-            listingImgURL
+            listingImgURL,
+            availableSlots: Array.isArray(availableSlots) ? availableSlots : []
         });
 
         await newListing.save();
@@ -51,7 +52,7 @@ export const createSkillListing = async (req, res) => {
 // Update an existing skill listing
 export const updateSkillListing = async (req, res) => {
     try {
-        const { title, description, fee, proficiency, skillID, listingImgURL } = req.body;
+        const { title, description, fee, proficiency, skillID, listingImgURL, availableSlots } = req.body;
         const listingID = req.params.id;
         const teacherID = req.user.userId;
 
@@ -84,6 +85,9 @@ export const updateSkillListing = async (req, res) => {
         listing.proficiency = proficiency;
         listing.skillID = skillID;
         listing.listingImgURL = listingImgURL;
+        if (Array.isArray(availableSlots)) {
+            listing.availableSlots = availableSlots;
+        }
 
         await listing.save();
 

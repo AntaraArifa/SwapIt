@@ -1,47 +1,63 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react"
-import { useNavigate } from "react-router-dom"
-import { Plus, X, BookOpen, Tag, Award, Clock, FileText, Folder, AlertCircle, CheckCircle, User, Globe, Eye, Edit3, ChevronDown } from "lucide-react"
-import { useSelector } from "react-redux"
-import MarkdownRenderer from "./MarkdownRenderer"
-import { buildApiUrl, API_ENDPOINTS } from "../../config/api"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Plus,
+  X,
+  BookOpen,
+  Tag,
+  Award,
+  Clock,
+  FileText,
+  Folder,
+  AlertCircle,
+  CheckCircle,
+  User,
+  Globe,
+  Eye,
+  Edit3,
+  ChevronDown,
+} from "lucide-react";
+import { useSelector } from "react-redux";
+import MarkdownRenderer from "./MarkdownRenderer";
+import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
 
 // Custom Dropdown Component
 const CustomDropdown = ({ value, onChange, options, placeholder, error }) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleSelect = (option) => {
     // Handle both string options and object options
-    const selectedValue = typeof option === 'object' ? option.value : option
-    onChange(selectedValue)
-    setIsOpen(false)
-  }
+    const selectedValue = typeof option === "object" ? option.value : option;
+    onChange(selectedValue);
+    setIsOpen(false);
+  };
 
   // Find display text for current value
   const getDisplayText = () => {
-    if (!value) return placeholder
-    
-    const option = options.find(opt => 
-      typeof opt === 'object' ? opt.value === value : opt === value
-    )
-    
-    return typeof option === 'object' ? option.label : option || value
-  }
+    if (!value) return placeholder;
+
+    const option = options.find((opt) =>
+      typeof opt === "object" ? opt.value === value : opt === value
+    );
+
+    return typeof option === "object" ? option.label : option || value;
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -49,15 +65,21 @@ const CustomDropdown = ({ value, onChange, options, placeholder, error }) => {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full px-4 py-4 border-2 rounded-xl text-base transition-all duration-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-left flex items-center justify-between ${
-          error ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"
+          error
+            ? "border-red-500 bg-red-50"
+            : "border-gray-200 hover:border-gray-300"
         }`}
       >
         <span className={value ? "text-gray-900" : "text-gray-500"}>
           {getDisplayText()}
         </span>
-        <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
       </button>
-      
+
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
           {options.map((option, index) => (
@@ -67,18 +89,18 @@ const CustomDropdown = ({ value, onChange, options, placeholder, error }) => {
               onClick={() => handleSelect(option)}
               className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors duration-150 first:rounded-t-xl last:rounded-b-xl"
             >
-              {typeof option === 'object' ? option.label : option}
+              {typeof option === "object" ? option.label : option}
             </button>
           ))}
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
 const AddListing = () => {
-  const navigate = useNavigate()
-  const user = useSelector((state) => state.auth.user)
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -86,181 +108,254 @@ const AddListing = () => {
     proficiency: "",
     skillID: "",
     listingImgURL: "",
-  })
-  const [errors, setErrors] = useState({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [currentStep, setCurrentStep] = useState(1)
-  const [previewMode, setPreviewMode] = useState(false)
+    availableSlots: [],
+  });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [previewMode, setPreviewMode] = useState(false);
 
-  const proficiencyLevels = ["Beginner", "Intermediate", "Advanced", "Expert"]
+  const proficiencyLevels = ["Beginner", "Intermediate", "Advanced", "Expert"];
 
   // State for available skills
-  const [availableSkills, setAvailableSkills] = useState([])
-  const [loadingSkills, setLoadingSkills] = useState(true)
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [loadingSkills, setLoadingSkills] = useState(true);
 
   // Fetch available skills on component mount
   useEffect(() => {
     const fetchSkills = async () => {
       if (!user || !user._id) {
-        setLoadingSkills(false)
-        return
+        setLoadingSkills(false);
+        return;
       }
 
       try {
-        setLoadingSkills(true)
-        
+        setLoadingSkills(true);
+
         // Get token from cookies
         const getCookie = (name) => {
           const value = `; ${document.cookie}`;
           const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop().split(';').shift();
+          if (parts.length === 2) return parts.pop().split(";").shift();
           return null;
         };
-        
-        const token = getCookie('token');
-        
+
+        const token = getCookie("token");
+
         const headers = {
-          'Content-Type': 'application/json',
-        }
-        
+          "Content-Type": "application/json",
+        };
+
         // Add authorization header if token exists
         if (token) {
-          headers['Authorization'] = `Bearer ${token}`
+          headers["Authorization"] = `Bearer ${token}`;
         }
 
-        const response = await fetch(buildApiUrl(API_ENDPOINTS.SKILLS.BY_ID(user._id)), {
-          method: 'GET',
-          headers: headers,
-          credentials: 'include'
-        })
+        const response = await fetch(
+          buildApiUrl(API_ENDPOINTS.SKILLS.BY_ID(user._id)),
+          {
+            method: "GET",
+            headers: headers,
+            credentials: "include",
+          }
+        );
 
         if (response.ok) {
-          const data = await response.json()
-          
+          const data = await response.json();
+
           if (data.success && data.skills) {
-            setAvailableSkills(data.skills)
+            setAvailableSkills(data.skills);
           } else {
-            setAvailableSkills([])
+            setAvailableSkills([]);
           }
         } else {
-          setAvailableSkills([])
+          setAvailableSkills([]);
         }
       } catch (error) {
-        setAvailableSkills([])
+        setAvailableSkills([]);
       } finally {
-        setLoadingSkills(false)
+        setLoadingSkills(false);
       }
-    }
-    
-    fetchSkills()
-  }, [user])
+    };
+
+    fetchSkills();
+  }, [user]);
 
   const steps = [
-    { id: 1, title: "Basic Information", description: "Listing title and description" },
-    { id: 2, title: "Skill & Proficiency", description: "Select skill and level" },
-    { id: 3, title: "Pricing & Image", description: "Set fee and upload image" },
-    { id: 4, title: "Review & Submit", description: "Final review before publishing" }
-  ]
+    {
+      id: 1,
+      title: "Basic Information",
+      description: "Listing title and description",
+    },
+    {
+      id: 2,
+      title: "Skill & Proficiency",
+      description: "Select skill and level",
+    },
+    {
+      id: 3,
+      title: "Pricing & Image",
+      description: "Set fee and upload image",
+    },
+    {
+      id: 4,
+      title: "Review & Submit",
+      description: "Final review before publishing",
+    },
+  ];
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
+    }));
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
         [name]: "",
-      }))
+      }));
     }
-  }
+  };
+
+  // Slot input state
+  const [slotInput, setSlotInput] = useState("");
+  const [slotError, setSlotError] = useState("");
+
+  // Helper to validate and add slot
+  const handleAddSlot = () => {
+    if (!slotInput) {
+      setSlotError("Please select a time slot");
+      return;
+    }
+    // Check for duplicates
+    if (formData.availableSlots.includes(slotInput)) {
+      setSlotError("This slot is already added");
+      return;
+    }
+    // Check for < 1 hour gap with any existing slot
+    const [inputHour, inputMinute] = slotInput.split(":").map(Number);
+    const inputTotalMinutes = inputHour * 60 + inputMinute;
+    const hasConflict = formData.availableSlots.some((existing) => {
+      const [exHour, exMinute] = existing.split(":").map(Number);
+      const exTotalMinutes = exHour * 60 + exMinute;
+      return Math.abs(inputTotalMinutes - exTotalMinutes) < 60;
+    });
+    if (hasConflict) {
+      setSlotError("Slots must be at least 1 hour apart");
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      availableSlots: [...prev.availableSlots, slotInput],
+    }));
+    setSlotInput("");
+    setSlotError("");
+  };
+
+  // Remove slot
+  const handleRemoveSlot = (slot) => {
+    setFormData((prev) => ({
+      ...prev,
+      availableSlots: prev.availableSlots.filter((s) => s !== slot),
+    }));
+  };
 
   const validateForm = useCallback(() => {
-    const newErrors = {}
+    const newErrors = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = "Listing title is required"
+      newErrors.title = "Listing title is required";
     } else if (formData.title.trim().length < 3) {
-      newErrors.title = "Title must be at least 3 characters"
+      newErrors.title = "Title must be at least 3 characters";
     } else if (formData.title.trim().length > 100) {
-      newErrors.title = "Title must be less than 100 characters"
+      newErrors.title = "Title must be less than 100 characters";
     }
 
     if (!formData.description.trim()) {
-      newErrors.description = "Description is required"
+      newErrors.description = "Description is required";
     } else if (formData.description.trim().length < 50) {
-      newErrors.description = "Description must be at least 50 characters for better clarity"
+      newErrors.description =
+        "Description must be at least 50 characters for better clarity";
     } else if (formData.description.trim().length > 5000) {
-      newErrors.description = "Description must be less than 5000 characters"
+      newErrors.description = "Description must be less than 5000 characters";
     }
 
     if (!formData.skillID) {
-      newErrors.skillID = "Skill selection is required"
+      newErrors.skillID = "Skill selection is required";
     }
 
     if (!formData.proficiency) {
-      newErrors.proficiency = "Proficiency level is required"
+      newErrors.proficiency = "Proficiency level is required";
     }
 
     if (!formData.fee) {
-      newErrors.fee = "Fee is required"
+      newErrors.fee = "Fee is required";
     } else if (formData.fee < 0 || formData.fee > 10000) {
-      newErrors.fee = "Fee must be between 0 and 10000"
+      newErrors.fee = "Fee must be between 0 and 10000";
     }
 
     if (!formData.listingImgURL.trim()) {
-      newErrors.listingImgURL = "Image URL is required"
+      newErrors.listingImgURL = "Image URL is required";
     } else {
       // Basic URL validation
       try {
-        new URL(formData.listingImgURL)
+        new URL(formData.listingImgURL);
       } catch {
-        newErrors.listingImgURL = "Please enter a valid image URL"
+        newErrors.listingImgURL = "Please enter a valid image URL";
       }
     }
 
-    return { isValid: Object.keys(newErrors).length === 0, errors: newErrors }
-  }, [formData])
+    return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
+  }, [formData]);
 
   // Memoized form validation state to prevent re-renders
   const isFormValid = useMemo(() => {
-    return validateForm().isValid
-  }, [validateForm])
+    return validateForm().isValid;
+  }, [validateForm]);
 
   const nextStep = () => {
-    if (currentStep < 4) setCurrentStep(currentStep + 1)
-  }
+    if (currentStep < 4) setCurrentStep(currentStep + 1);
+  };
 
   const prevStep = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1)
-  }
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
 
   const canProceedToNext = () => {
     switch (currentStep) {
       case 1:
-        return formData.title.trim() && formData.description.trim() && formData.description.trim().length >= 50
+        return (
+          formData.title.trim() &&
+          formData.description.trim() &&
+          formData.description.trim().length >= 50
+        );
       case 2:
-        return !loadingSkills && formData.skillID && formData.proficiency && availableSkills.length > 0
+        return (
+          !loadingSkills &&
+          formData.skillID &&
+          formData.proficiency &&
+          availableSkills.length > 0
+        );
       case 3:
-        return formData.fee && formData.listingImgURL.trim()
+        return formData.fee && formData.listingImgURL.trim();
       default:
-        return true
+        return true;
     }
-  }
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const validation = validateForm()
-    
+    const validation = validateForm();
+
     if (!validation.isValid) {
-      setErrors(validation.errors)
-      return
+      setErrors(validation.errors);
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       const requestBody = {
@@ -269,54 +364,59 @@ const AddListing = () => {
         fee: parseInt(formData.fee),
         proficiency: formData.proficiency,
         skillID: formData.skillID,
-        listingImgURL: formData.listingImgURL.trim()
-      }
+        listingImgURL: formData.listingImgURL.trim(),
+        availableSlots: formData.availableSlots,
+      };
 
       // Get token from cookies
       const getCookie = (name) => {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
+        if (parts.length === 2) return parts.pop().split(";").shift();
         return null;
       };
-      
-      const token = getCookie('token');
-      
+
+      const token = getCookie("token");
+
       const headers = {
-        'Content-Type': 'application/json',
-      }
-      
+        "Content-Type": "application/json",
+      };
+
       // Add authorization header if token exists
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+        headers["Authorization"] = `Bearer ${token}`;
       }
 
       const response = await fetch(buildApiUrl(API_ENDPOINTS.LISTINGS.CREATE), {
-        method: 'POST',
+        method: "POST",
         headers: headers,
-        credentials: 'include',
-        body: JSON.stringify(requestBody)
-      })
+        credentials: "include",
+        body: JSON.stringify(requestBody),
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        
+        const data = await response.json();
+
         if (data.success) {
-          alert("Listing created successfully!")
-          navigate("/skills")
+          alert("Listing created successfully!");
+          navigate("/skills");
         } else {
-          alert(`Error: ${data.message || 'Failed to create listing'}`)
+          alert(`Error: ${data.message || "Failed to create listing"}`);
         }
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        alert(`Error: ${errorData.message || 'Failed to create listing. Please try again.'}`)
+        const errorData = await response.json().catch(() => ({}));
+        alert(
+          `Error: ${
+            errorData.message || "Failed to create listing. Please try again."
+          }`
+        );
       }
     } catch (error) {
-      alert("Error creating listing. Please try again.")
+      alert("Error creating listing. Please try again.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -326,9 +426,12 @@ const AddListing = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-full mb-4">
             <Plus className="h-8 w-8" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Share Your Expertise</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Share Your Expertise
+          </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Create a professional skill listing and help others learn from your experience
+            Create a professional skill listing and help others learn from your
+            experience
           </p>
         </div>
 
@@ -352,7 +455,13 @@ const AddListing = () => {
                     )}
                   </div>
                   <div className="mt-3 text-center">
-                    <p className={`text-sm font-medium ${currentStep >= step.id ? "text-blue-600" : "text-gray-500"}`}>
+                    <p
+                      className={`text-sm font-medium ${
+                        currentStep >= step.id
+                          ? "text-blue-600"
+                          : "text-gray-500"
+                      }`}
+                    >
                       {step.title}
                     </p>
                     <p className="text-xs text-gray-400 mt-1 max-w-24">
@@ -379,8 +488,12 @@ const AddListing = () => {
             {currentStep === 1 && (
               <div className="space-y-8">
                 <div className="border-b border-gray-200 pb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Basic Information</h2>
-                  <p className="text-gray-600">Create your listing title and description</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Basic Information
+                  </h2>
+                  <p className="text-gray-600">
+                    Create your listing title and description
+                  </p>
                 </div>
 
                 {/* Listing Title */}
@@ -396,7 +509,9 @@ const AddListing = () => {
                     onChange={handleInputChange}
                     placeholder="e.g., Mastering Supply Chain Management"
                     className={`w-full px-4 py-4 border-2 rounded-xl text-lg transition-all duration-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 ${
-                      errors.title ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"
+                      errors.title
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                   />
                   {errors.title && (
@@ -406,7 +521,8 @@ const AddListing = () => {
                     </div>
                   )}
                   <p className="text-gray-500 text-sm">
-                    Create an engaging title that clearly describes your offering.
+                    Create an engaging title that clearly describes your
+                    offering.
                   </p>
                 </div>
 
@@ -422,8 +538,8 @@ const AddListing = () => {
                         type="button"
                         onClick={() => setPreviewMode(false)}
                         className={`flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-                          !previewMode 
-                            ? "bg-blue-100 text-blue-700 border border-blue-200" 
+                          !previewMode
+                            ? "bg-blue-100 text-blue-700 border border-blue-200"
                             : "text-gray-500 hover:text-gray-700"
                         }`}
                       >
@@ -434,8 +550,8 @@ const AddListing = () => {
                         type="button"
                         onClick={() => setPreviewMode(true)}
                         className={`flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-                          previewMode 
-                            ? "bg-blue-100 text-blue-700 border border-blue-200" 
+                          previewMode
+                            ? "bg-blue-100 text-blue-700 border border-blue-200"
                             : "text-gray-500 hover:text-gray-700"
                         }`}
                       >
@@ -454,34 +570,43 @@ const AddListing = () => {
                         rows={8}
                         placeholder={`Provide a comprehensive description of what students will learn, your teaching methodology, and the outcomes they can expect.`}
                         className={`w-full px-4 py-4 border-2 rounded-xl text-base leading-relaxed transition-all duration-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 resize-none font-mono ${
-                          errors.description ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"
+                          errors.description
+                            ? "border-red-500 bg-red-50"
+                            : "border-gray-200 hover:border-gray-300"
                         }`}
                       />
-                      
+
                       {/* Markdown Help */}
                       <div className="bg-gray-50 rounded-lg p-4 text-xs text-gray-600">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div>
                             <p className="font-semibold mb-1">Headers:</p>
-                            <code># H1</code><br/>
-                            <code>## H2</code><br/>
+                            <code># H1</code>
+                            <br />
+                            <code>## H2</code>
+                            <br />
                             <code>### H3</code>
                           </div>
                           <div>
                             <p className="font-semibold mb-1">Emphasis:</p>
-                            <code>**bold**</code><br/>
-                            <code>*italic*</code><br/>
+                            <code>**bold**</code>
+                            <br />
+                            <code>*italic*</code>
+                            <br />
                             <code>`code`</code>
                           </div>
                           <div>
                             <p className="font-semibold mb-1">Lists:</p>
-                            <code>- Item 1</code><br/>
-                            <code>- Item 2</code><br/>
+                            <code>- Item 1</code>
+                            <br />
+                            <code>- Item 2</code>
+                            <br />
                             <code>1. Numbered</code>
                           </div>
                           <div>
                             <p className="font-semibold mb-1">Quotes:</p>
-                            <code>&gt; Quote text</code><br/>
+                            <code>&gt; Quote text</code>
+                            <br />
                             <code>[Link](url)</code>
                           </div>
                         </div>
@@ -540,8 +665,12 @@ const AddListing = () => {
             {currentStep === 2 && (
               <div className="space-y-8">
                 <div className="border-b border-gray-200 pb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Skill & Proficiency</h2>
-                  <p className="text-gray-600">Select the skill you're offering and your proficiency level</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Skill & Proficiency
+                  </h2>
+                  <p className="text-gray-600">
+                    Select the skill you're offering and your proficiency level
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -566,20 +695,25 @@ const AddListing = () => {
                             No skills found. Please{" "}
                             <button
                               type="button"
-                              onClick={() => navigate('/skills/add')}
+                              onClick={() => navigate("/skills/add")}
                               className="underline hover:no-underline font-medium"
                             >
                               create a skill
-                            </button>
-                            {" "}first.
+                            </button>{" "}
+                            first.
                           </span>
                         </div>
                       </div>
                     ) : (
                       <CustomDropdown
                         value={formData.skillID}
-                        onChange={(value) => setFormData({ ...formData, skillID: value })}
-                        options={availableSkills.map(skill => ({ label: skill.name, value: skill._id }))}
+                        onChange={(value) =>
+                          setFormData({ ...formData, skillID: value })
+                        }
+                        options={availableSkills.map((skill) => ({
+                          label: skill.name,
+                          value: skill._id,
+                        }))}
                         placeholder="Choose from your skills"
                         error={errors.skillID}
                       />
@@ -591,10 +725,12 @@ const AddListing = () => {
                       </div>
                     )}
                     <p className="text-gray-500 text-sm">
-                      Select one of your existing skills to create a listing for.
+                      Select one of your existing skills to create a listing
+                      for.
                       {availableSkills.length > 0 && (
                         <span className="block mt-1 text-blue-600">
-                          Found {availableSkills.length} skill{availableSkills.length !== 1 ? 's' : ''} available
+                          Found {availableSkills.length} skill
+                          {availableSkills.length !== 1 ? "s" : ""} available
                         </span>
                       )}
                     </p>
@@ -639,12 +775,17 @@ const AddListing = () => {
               </div>
             )}
 
-            {/* Step 3: Pricing & Image */}
+            {/* Step 3: Pricing, Image & Available Slots */}
             {currentStep === 3 && (
               <div className="space-y-8">
                 <div className="border-b border-gray-200 pb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Pricing & Image</h2>
-                  <p className="text-gray-600">Set your fee and add an attractive image for your listing</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Pricing, Image & Available Slots
+                  </h2>
+                  <p className="text-gray-600">
+                    Set your fee, add an image, and specify your available
+                    one-hour slots
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -664,7 +805,9 @@ const AddListing = () => {
                         max="10000"
                         placeholder="e.g., 55"
                         className={`w-full px-4 py-4 pl-8 border-2 rounded-xl text-lg transition-all duration-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 ${
-                          errors.fee ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"
+                          errors.fee
+                            ? "border-red-500 bg-red-50"
+                            : "border-gray-200 hover:border-gray-300"
                         }`}
                       />
                       <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">
@@ -695,7 +838,9 @@ const AddListing = () => {
                       onChange={handleInputChange}
                       placeholder="https://example.com/image.jpg"
                       className={`w-full px-4 py-4 border-2 rounded-xl text-lg transition-all duration-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 ${
-                        errors.listingImgURL ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"
+                        errors.listingImgURL
+                          ? "border-red-500 bg-red-50"
+                          : "border-gray-200 hover:border-gray-300"
                       }`}
                     />
                     {errors.listingImgURL && (
@@ -707,28 +852,89 @@ const AddListing = () => {
                     <p className="text-gray-500 text-sm">
                       Add a relevant image URL that represents your listing
                     </p>
-                    
                     {/* Image Preview */}
                     {formData.listingImgURL && (
                       <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                        <p className="text-sm font-medium text-gray-700 mb-2">
+                          Preview:
+                        </p>
                         <div className="border-2 border-gray-200 rounded-xl p-4">
                           <img
                             src={formData.listingImgURL}
                             alt="Listing preview"
                             className="w-full h-48 object-cover rounded-lg"
                             onError={(e) => {
-                              e.target.style.display = 'none'
-                              e.target.nextSibling.style.display = 'flex'
+                              e.target.style.display = "none";
+                              e.target.nextSibling.style.display = "flex";
                             }}
                           />
                           <div className="hidden w-full h-48 bg-gray-100 rounded-lg items-center justify-center">
-                            <span className="text-gray-500">Invalid image URL</span>
+                            <span className="text-gray-500">
+                              Invalid image URL
+                            </span>
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Available Slots */}
+                <div className="mt-8">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                    Available One-Hour Time Slots
+                  </label>
+                  <div className="flex flex-col md:flex-row gap-4 items-center mb-2">
+                    <input
+                      type="time"
+                      value={slotInput}
+                      onChange={(e) => {
+                        setSlotInput(e.target.value);
+                        setSlotError("");
+                      }}
+                      className="px-4 py-3 border-2 rounded-xl text-base focus:ring-4 focus:ring-blue-100 focus:border-blue-500 border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddSlot}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium transition-all duration-200"
+                    >
+                      Add Slot
+                    </button>
+                  </div>
+                  {slotError && (
+                    <div className="text-red-600 text-sm mb-2 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      {slotError}
+                    </div>
+                  )}
+                  {formData.availableSlots.length > 0 && (
+                    <div className="mt-2">
+                      <div className="flex flex-wrap gap-2">
+                        {formData.availableSlots.map((slot) => (
+                          <div
+                            key={slot}
+                            className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium gap-2"
+                          >
+                            {slot}
+                            <button
+                              type="button"
+                              className="ml-1 text-blue-600 hover:text-red-600"
+                              onClick={() => handleRemoveSlot(slot)}
+                              aria-label="Remove slot"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        All slots are for 1 hour. Add as many as you want. (Time
+                        only, e.g., 14:00)
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -737,8 +943,12 @@ const AddListing = () => {
             {currentStep === 4 && (
               <div className="space-y-8">
                 <div className="border-b border-gray-200 pb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Review Your Listing</h2>
-                  <p className="text-gray-600">Double-check all information before publishing</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Review Your Listing
+                  </h2>
+                  <p className="text-gray-600">
+                    Double-check all information before publishing
+                  </p>
                 </div>
 
                 {/* Preview Card */}
@@ -755,9 +965,11 @@ const AddListing = () => {
                           />
                         </div>
                       )}
-                      
+
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{formData.title}</h3>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                          {formData.title}
+                        </h3>
                         <div className="flex items-center gap-3 mb-3">
                           {formData.proficiency && (
                             <span
@@ -777,25 +989,27 @@ const AddListing = () => {
                           )}
                           {formData.fee && (
                             <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                              <Clock className="h-3 w-3 mr-1" />
-                              ${formData.fee}
+                              <Clock className="h-3 w-3 mr-1" />${formData.fee}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    
+
                     {formData.description && (
                       <div className="text-gray-600 leading-relaxed mb-4">
                         <MarkdownRenderer content={formData.description} />
                       </div>
                     )}
-                    
+
                     {formData.skillID && (
                       <div className="flex items-center gap-2 mb-4 text-gray-600">
                         <BookOpen className="h-4 w-4" />
                         <span className="text-sm font-medium">
-                          Skill: {availableSkills.find(skill => skill._id === formData.skillID)?.name || formData.skillID}
+                          Skill:{" "}
+                          {availableSkills.find(
+                            (skill) => skill._id === formData.skillID
+                          )?.name || formData.skillID}
                         </span>
                       </div>
                     )}
@@ -804,7 +1018,9 @@ const AddListing = () => {
 
                 {/* Confirmation Checklist */}
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-                  <h4 className="text-lg font-semibold text-yellow-800 mb-4">Before you submit:</h4>
+                  <h4 className="text-lg font-semibold text-yellow-800 mb-4">
+                    Before you submit:
+                  </h4>
                   <div className="space-y-3 text-sm text-yellow-700">
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5 text-yellow-600" />
@@ -812,7 +1028,9 @@ const AddListing = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5 text-yellow-600" />
-                      <span>Description clearly explains what learners will get</span>
+                      <span>
+                        Description clearly explains what learners will get
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5 text-yellow-600" />
@@ -889,17 +1107,24 @@ const AddListing = () => {
             <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 text-blue-600 rounded-full mb-4">
               <User className="h-6 w-6" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Tips for Success</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Tips for Success
+            </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600">
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Use clear, professional language that beginners can understand</span>
+                <span>
+                  Use clear, professional language that beginners can understand
+                </span>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Include specific outcomes and deliverables students will achieve</span>
+                <span>
+                  Include specific outcomes and deliverables students will
+                  achieve
+                </span>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
@@ -909,11 +1134,15 @@ const AddListing = () => {
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Be honest about skill level to attract the right students</span>
+                <span>
+                  Be honest about skill level to attract the right students
+                </span>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Highlight your unique approach or teaching methodology</span>
+                <span>
+                  Highlight your unique approach or teaching methodology
+                </span>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
@@ -924,7 +1153,7 @@ const AddListing = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AddListing
+export default AddListing;
