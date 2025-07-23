@@ -16,11 +16,14 @@ export const createSession = async (req, res) => {
       return res.status(400).json({ message: "Selected time slot is not available", success: false });
     }
 
+
     const newSession = new Session({
       learnerID,
       teacherID,
       skillListingID,
       scheduledTime: slot, // store the selected time slot as scheduledTime
+      skillName: skillListing.title,
+      price: skillListing.fee,
       note,
     });
 
@@ -162,3 +165,36 @@ export const respondReschedule = async (req, res) => {
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
+
+// Get sessions where user is learner
+export const getLearnerSessions = async (req, res) => {
+  try {
+    const learnerID = req.user.userId;
+    const sessions = await Session.find({ learnerID })
+      .populate("teacherID", "fullname profile.profilePhoto")
+      .populate("skillListingID", "title")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ message: "Learner sessions retrieved", success: true, sessions });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+
+// Get sessions where user is teacher
+export const getTeacherSessions = async (req, res) => {
+  try {
+    const teacherID = req.user.userId;
+    const sessions = await Session.find({ teacherID })
+      .populate("learnerID", "fullname profile.profilePhoto")
+      .populate("skillListingID", "title")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ message: "Teacher sessions retrieved", success: true, sessions });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+

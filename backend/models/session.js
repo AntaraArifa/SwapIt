@@ -20,6 +20,14 @@ const sessionSchema = new mongoose.Schema({
     type: String, // e.g. '14:00'
     required: true,
   },
+  skillName: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
   status: {
     type: String,
     enum: ["pending", "accepted", "rejected", "rescheduled", "cancelled", "completed"],
