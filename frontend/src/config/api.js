@@ -4,9 +4,9 @@ export async function respondSessionReschedule(sessionId, accept) {
   await axios.patch(buildApiUrl(endpoint), { accept }, { withCredentials: true });
 }
 // Propose session reschedule
-export async function proposeSessionReschedule(sessionId, { newTime }) {
+export async function proposeSessionReschedule(sessionId, { newTime, newDate }) {
   const endpoint = `/sessions/${sessionId}/propose-reschedule`;
-  await axios.patch(buildApiUrl(endpoint), { newTime }, { withCredentials: true });
+  await axios.patch(buildApiUrl(endpoint), { newTime, newDate }, { withCredentials: true });
 }
 // API Configuration
 const API_CONFIG = {

@@ -17,7 +17,7 @@ const sessionSchema = new mongoose.Schema({
     required: true,
   },
   scheduledTime: {
-    type: String, // e.g. '14:00'
+    type: Date, // Stores both date and time
     required: true,
   },
   skillName: {
@@ -38,12 +38,19 @@ const sessionSchema = new mongoose.Schema({
   },
   rescheduleRequest: {
     newDate: Date,
+    newTime: String, // Add this line to store the time part
     newDuration: Number,
     newTimeZone: String,
     requestedAt: Date,
   },
 }, { timestamps: true });
 
-const Session = mongoose.model("Session", sessionSchema);
+// Virtual to get time string (HH:mm) for slot matching
+sessionSchema.virtual('scheduledTimeString').get(function() {
+  if (!this.scheduledTime) return '';
+  const date = new Date(this.scheduledTime);
+  return date.toISOString().substring(11, 16); // 'HH:mm'
+});
 
+const Session = mongoose.model("Session", sessionSchema);
 export default Session;

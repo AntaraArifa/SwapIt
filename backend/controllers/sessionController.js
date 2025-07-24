@@ -5,33 +5,42 @@ import SkillListing from "../models/skillListing.js";
 export const createSession = async (req, res) => {
   try {
     const learnerID = req.user.userId;
-    const { teacherID, skillListingID, slot, note } = req.body;
+    const { teacherID, skillListingID, slotDate, slotTime, note } = req.body;
 
     const skillListing = await SkillListing.findById(skillListingID);
     if (!skillListing) {
       return res.status(404).json({ message: "Skill listing not found", success: false });
     }
-    // Check if requested slot exists in availableSlots
-    if (!slot || !skillListing.availableSlots.includes(slot)) {
+    // Only match the time part (HH:mm) with availableSlots
+    if (!slotTime || !skillListing.availableSlots.includes(slotTime)) {
       return res.status(400).json({ message: "Selected time slot is not available", success: false });
     }
+    // Combine date and time into a Date object
+    if (!slotDate) {
+      return res.status(400).json({ message: "Date is required", success: false });
+    }
+    const scheduledTime = new Date(`${slotDate}T${slotTime}`);
 
+    // Check for existing session for this skillListing, date, and time
+    const existingSession = await Session.findOne({
+      skillListingID,
+      scheduledTime: scheduledTime,
+    });
+    if (existingSession) {
+      return res.status(400).json({ message: "This slot is already booked for the selected date.", success: false });
+    }
 
     const newSession = new Session({
       learnerID,
       teacherID,
       skillListingID,
-      scheduledTime: slot, // store the selected time slot as scheduledTime
+      scheduledTime,
       skillName: skillListing.title,
       price: skillListing.fee,
       note,
     });
 
     await newSession.save();
-
-    // Remove the booked slot from availableSlots
-    skillListing.availableSlots = skillListing.availableSlots.filter(s => s !== slot);
-    await skillListing.save();
 
     res.status(201).json({ message: "Session request sent", success: true, session: newSession });
   } catch (err) {
@@ -102,11 +111,11 @@ export const updateSessionStatus = async (req, res) => {
 export const proposeReschedule = async (req, res) => {
   try {
     const sessionId = req.params.sessionId;
-    const { newTime } = req.body;
+    const { newDate, newTime } = req.body;
     const userId = req.user.userId;
 
-    if (!newTime) {
-      return res.status(400).json({ message: "No new time provided", success: false });
+    if (!newTime || !newDate) {
+      return res.status(400).json({ message: "New date and time required", success: false });
     }
 
     const session = await Session.findById(sessionId);
@@ -118,8 +127,20 @@ export const proposeReschedule = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to reschedule this session", success: false });
     }
 
+    // Check for double-booking: is there already a session for this skillListing, date, and time?
+    const rescheduleDateTime = new Date(`${newDate}T${newTime}`);
+    const existingSession = await Session.findOne({
+      skillListingID: session.skillListingID,
+      scheduledTime: rescheduleDateTime,
+      _id: { $ne: session._id },
+    });
+    if (existingSession) {
+      return res.status(400).json({ message: "This slot is already booked for the selected date.", success: false });
+    }
+
     session.rescheduleRequest = {
       newTime,
+      newDate,
       requestedAt: new Date(),
     };
     session.status = "rescheduled";
@@ -143,7 +164,7 @@ export const proposeReschedule = async (req, res) => {
     await session.save();
 
     res.status(200).json({ message: "Reschedule proposed", success: true, session });
-    } catch (err) {
+  } catch (err) {
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
@@ -171,10 +192,10 @@ export const respondReschedule = async (req, res) => {
 
 
     if (accept) {
-      if (!session.rescheduleRequest.newTime) {
-        return res.status(400).json({ message: "No new time provided in reschedule request", success: false });
+      if (!session.rescheduleRequest.newTime || !session.rescheduleRequest.newDate) {
+        return res.status(400).json({ message: "No new date/time provided in reschedule request", success: false });
       }
-      // Check if the new time is available in the teacher's SkillListing
+      // Check if the new time is available in the teacher's SkillListing (by time only)
       const skillListing = await SkillListing.findById(session.skillListingID);
       if (!skillListing) {
         return res.status(404).json({ message: "Skill listing not found", success: false });
@@ -182,10 +203,11 @@ export const respondReschedule = async (req, res) => {
       if (!skillListing.availableSlots.includes(session.rescheduleRequest.newTime)) {
         return res.status(400).json({ message: "Selected time slot is no longer available", success: false });
       }
-      // Remove the booked slot from availableSlots
+      // Remove the booked slot from availableSlots (by time only)
       skillListing.availableSlots = skillListing.availableSlots.filter(s => s !== session.rescheduleRequest.newTime);
       await skillListing.save();
-      session.scheduledTime = session.rescheduleRequest.newTime;
+      // Combine newDate and newTime into a Date object
+      session.scheduledTime = new Date(`${session.rescheduleRequest.newDate}T${session.rescheduleRequest.newTime}`);
       session.status = "accepted";
     } else {
       session.status = "accepted"; // revert to accepted or original status

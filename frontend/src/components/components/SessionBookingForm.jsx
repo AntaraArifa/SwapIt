@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
+import { getSkillListingById } from "../../config/listings";
 import axios from "axios";
 
 export default function SessionBookingForm() {
@@ -13,6 +14,19 @@ export default function SessionBookingForm() {
     time: "",
     note: "",
   });
+  const [availableSlots, setAvailableSlots] = useState([]);
+  useEffect(() => {
+    async function fetchSlots() {
+      if (!skillId) return;
+      try {
+        const listing = await getSkillListingById(skillId);
+        setAvailableSlots(listing.availableSlots || []);
+      } catch (e) {
+        setAvailableSlots([]);
+      }
+    }
+    fetchSlots();
+  }, [skillId]);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -31,11 +45,11 @@ export default function SessionBookingForm() {
     try {
       if (!teacherID) throw new Error("Teacher ID is missing");
 
-      const slot = form.time;
       const sessionData = {
         teacherID,
         skillListingID: skillId,
-        slot,
+        slotDate: form.date,
+        slotTime: form.time,
         note: form.note || "",
       };
 
@@ -82,14 +96,24 @@ export default function SessionBookingForm() {
           </div>
           <div>
             <label className="block text-gray-700 font-medium mb-1">Time</label>
-            <input
-              type="time"
+            <select
               name="time"
               value={form.time}
               onChange={handleChange}
               required
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none transition"
-            />
+            >
+              <option value="">Select Time</option>
+              {availableSlots.length === 0 ? (
+                <option disabled>No slots</option>
+              ) : (
+                availableSlots.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
         </div>
 
