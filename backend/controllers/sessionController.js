@@ -105,6 +105,10 @@ export const proposeReschedule = async (req, res) => {
     const { newTime } = req.body;
     const userId = req.user.userId;
 
+    if (!newTime) {
+      return res.status(400).json({ message: "No new time provided", success: false });
+    }
+
     const session = await Session.findById(sessionId);
     if (!session) {
       return res.status(404).json({ message: "Session not found", success: false });
@@ -119,12 +123,27 @@ export const proposeReschedule = async (req, res) => {
       requestedAt: new Date(),
     };
     session.status = "rescheduled";
+    // Ensure required fields are not lost
+    if (!session.skillName || !session.price) {
+      // If not present, fetch from DB
+      let skillListingDoc = null;
+      if (session.skillListingID && typeof session.skillListingID === 'object' && session.skillListingID.title) {
+        // Populated
+        skillListingDoc = session.skillListingID;
+      } else {
+        // Not populated, fetch
+        skillListingDoc = await SkillListing.findById(session.skillListingID);
+      }
+      if (skillListingDoc) {
+        if (!session.skillName) session.skillName = skillListingDoc.title;
+        if (!session.price) session.price = skillListingDoc.fee;
+      }
+    }
 
     await session.save();
 
     res.status(200).json({ message: "Reschedule proposed", success: true, session });
-  } catch (err) {
-    console.error(err);
+    } catch (err) {
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
@@ -149,11 +168,41 @@ export const respondReschedule = async (req, res) => {
       return res.status(400).json({ message: "No reschedule request pending", success: false });
     }
 
+
+
     if (accept) {
+      if (!session.rescheduleRequest.newTime) {
+        return res.status(400).json({ message: "No new time provided in reschedule request", success: false });
+      }
+      // Check if the new time is available in the teacher's SkillListing
+      const skillListing = await SkillListing.findById(session.skillListingID);
+      if (!skillListing) {
+        return res.status(404).json({ message: "Skill listing not found", success: false });
+      }
+      if (!skillListing.availableSlots.includes(session.rescheduleRequest.newTime)) {
+        return res.status(400).json({ message: "Selected time slot is no longer available", success: false });
+      }
+      // Remove the booked slot from availableSlots
+      skillListing.availableSlots = skillListing.availableSlots.filter(s => s !== session.rescheduleRequest.newTime);
+      await skillListing.save();
       session.scheduledTime = session.rescheduleRequest.newTime;
       session.status = "accepted";
     } else {
       session.status = "accepted"; // revert to accepted or original status
+    }
+
+    // Ensure required fields are present
+    if (!session.skillName || !session.price) {
+      let skillListingDoc = null;
+      if (session.skillListingID && typeof session.skillListingID === 'object' && session.skillListingID.title) {
+        skillListingDoc = session.skillListingID;
+      } else {
+        skillListingDoc = await SkillListing.findById(session.skillListingID);
+      }
+      if (skillListingDoc) {
+        if (!session.skillName) session.skillName = skillListingDoc.title;
+        if (!session.price) session.price = skillListingDoc.fee;
+      }
     }
 
     session.rescheduleRequest = undefined;

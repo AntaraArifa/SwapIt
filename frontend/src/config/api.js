@@ -1,3 +1,13 @@
+// Learner responds to reschedule
+export async function respondSessionReschedule(sessionId, accept) {
+  const endpoint = `/sessions/${sessionId}/respond-reschedule`;
+  await axios.patch(buildApiUrl(endpoint), { accept }, { withCredentials: true });
+}
+// Propose session reschedule
+export async function proposeSessionReschedule(sessionId, { newTime }) {
+  const endpoint = `/sessions/${sessionId}/propose-reschedule`;
+  await axios.patch(buildApiUrl(endpoint), { newTime }, { withCredentials: true });
+}
 // API Configuration
 const API_CONFIG = {
   BASE_URL: 'http://localhost:3000/api/v1',
