@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Star, BookOpen, MessageCircle, Calendar, Award } from "lucide-react";
+import { useSelector } from "react-redux";
+import { Star, BookOpen, MessageCircle, Calendar, Award, Edit } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
 
 const SkillDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const user = useSelector(state => state.auth.user);
   const [skill, setSkill] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -164,6 +166,43 @@ const SkillDetails = () => {
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const convertTo12Hour = (time24) => {
+    // Handle different time formats
+    const timeStr = time24.toString().trim();
+    
+    // If already in 12-hour format, return as is
+    if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+      return timeStr;
+    }
+    
+    // Parse 24-hour format (e.g., "09:30", "9:30", "0930")
+    let hours, minutes;
+    
+    if (timeStr.includes(':')) {
+      [hours, minutes] = timeStr.split(':');
+    } else if (timeStr.length === 4) {
+      // Handle format like "0930"
+      hours = timeStr.substring(0, 2);
+      minutes = timeStr.substring(2, 4);
+    } else {
+      return timeStr; // Return original if format is unrecognized
+    }
+    
+    hours = parseInt(hours);
+    minutes = parseInt(minutes);
+    
+    // Validate hours and minutes
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return timeStr; // Return original if invalid
+    }
+    
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    
+    return `${displayHours}:${displayMinutes} ${period}`;
   };
 
   return (
@@ -347,17 +386,28 @@ const SkillDetails = () => {
               <span className="text-lg text-gray-600">/session</span>
             </div>
             <div className="space-y-3">
-              <button
-                onClick={() =>
-                  navigate(`/book-session/${skill._id}`, {
-                    state: { teacherID: skill.teacherID._id }, // pass teacherID here
-                  })
-                }
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
-              >
-                <Calendar className="h-4 w-4" />
-                Book a Session
-              </button>
+              {/* Check if current user is the listing owner */}
+              {user && skill.teacherID._id === user._id ? (
+                <button
+                  onClick={() => navigate(`/edit-listing/${skill._id}`)}
+                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 flex items-center justify-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit Listing
+                </button>
+              ) : (
+                <button
+                  onClick={() =>
+                    navigate(`/book-session/${skill._id}`, {
+                      state: { teacherID: skill.teacherID._id }, // pass teacherID here
+                    })
+                  }
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Book a Session
+                </button>
+              )}
 
               <button className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
                 <MessageCircle className="h-4 w-4" />
@@ -402,6 +452,23 @@ const SkillDetails = () => {
               <div className="flex justify-between">
                 <span className="text-gray-600">Format</span>
                 <span className="font-medium text-gray-900">One-on-One</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Available Slots</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {skill.availableSlots && skill.availableSlots.length > 0 ? (
+                    skill.availableSlots.map((slot, index) => (
+                      <span
+                        key={index}
+                        className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-medium"
+                      >
+                        {convertTo12Hour(slot)}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="font-medium text-gray-900">No slots available</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -462,7 +529,7 @@ const SkillDetails = () => {
             </div>
 
             <button
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate("/profile/" + skill.teacherID._id)}
               className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50"
             >
               View Instructor Profile

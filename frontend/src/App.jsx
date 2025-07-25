@@ -20,6 +20,8 @@ import AddSkills from "./components/pages/Skills/AddSkills";
 import BookSessionForm from "./components/components/SessionBookingForm";
 import LearnerSessions from "./components/pages/Sessions/LearnerSessions";
 import TeacherSessions from "./components/pages/Sessions/TeacherSessions";
+import UserProfile from "./components/pages/General/UserProfile";
+import EditListings from "./components/pages/Skills/edit/page";
 
 const Skills = () => (
   <div className="p-6 text-center">
@@ -53,11 +55,14 @@ const App = () => {
         <Route path="/listings/add" element={<AddListing />} />
         <Route path="/about" element={<About />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:id" element={<UserProfile />} />
+        {/* Authentication Routes */}
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/book-session/:skillId" element={<BookSessionForm />} />
         <Route path="/sessions/learner" element={<LearnerSessions />} />
         <Route path="/sessions/teacher" element={<TeacherSessions />} />
+        <Route path="/edit-listing/:id" element={<EditListings />} />
 
         <Route
           path="*"

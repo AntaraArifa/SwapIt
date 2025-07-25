@@ -18,6 +18,7 @@ const API_CONFIG = {
       BY_ID: (id) => `/listings/single/${id}`,
       TAGS: '/listings/tags',
       CREATE: '/listings/create',
+      UPDATE: (id) => `/listings/update/${id}`,
     },
     // User Authentication
     AUTH: {
@@ -28,7 +29,8 @@ const API_CONFIG = {
     // User Profile
     USER: {
       PROFILE: '/user/profile',
-      UPDATE: '/user/update',
+      UPDATE: '/user/profile/update',
+      BY_ID: (id) => `/user/${id}`,
     },
     // Skills
     SKILLS: {
