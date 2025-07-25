@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import { setUser } from '../../../redux/authSlice';
 import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit3 } from 'lucide-react';
+import { buildApiUrl, API_ENDPOINTS } from '../../../config/api';
 
-const BACKEND_URL = "http://localhost:3000/api/v1"; // ✅ Backend API root
-
-const Profile = ({ userId }) => {
+const Profile = () => {
+  const { id: userId } = useParams(); // Get userId from URL params (using 'id' from route)
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
 
@@ -27,7 +28,7 @@ const Profile = ({ userId }) => {
         // Fetch user by provided ID
         try {
           const token = localStorage.getItem('token') || user?.token;
-          const response = await fetch(`${BACKEND_URL}/user/${userId}`, {
+          const response = await fetch(buildApiUrl(API_ENDPOINTS.USER.BY_ID(userId)), {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -42,7 +43,6 @@ const Profile = ({ userId }) => {
 
           const data = await response.json();
           if (data.success) {
-            console.log('Fetched user:', data.user); // Debug log
             setProfileUser(data.user);
             // Set form data for the fetched user (for display purposes)
             setFormData({
@@ -111,7 +111,7 @@ const Profile = ({ userId }) => {
       data.append('skills', formData.skills);
       if (profilePhoto) data.append('profilePhoto', profilePhoto);
 
-      const res = await fetch(`${BACKEND_URL}/user/profile/update`, {
+      const res = await fetch(buildApiUrl(API_ENDPOINTS.USER.UPDATE), {
         method: 'POST',
         credentials: 'include',
         body: data
@@ -176,14 +176,6 @@ const Profile = ({ userId }) => {
 
   const isOwnProfile = !userId || (userId === user?._id) || (userId === user?._id?.toString());
   const currentDisplayUser = profileUser;
-
-  console.log('Debug Info:', { 
-    userId, 
-    currentUser: user?._id, 
-    isOwnProfile, 
-    profileUser: profileUser?._id,
-    currentDisplayUser: currentDisplayUser?.fullname 
-  }); // Debug log
 
   if (!user) {
     return <div className="text-center mt-10 text-gray-500">Please log in to view profiles.</div>;

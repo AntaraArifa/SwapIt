@@ -28,7 +28,8 @@ const API_CONFIG = {
     // User Profile
     USER: {
       PROFILE: '/user/profile',
-      UPDATE: '/user/update',
+      UPDATE: '/user/profile/update',
+      BY_ID: (id) => `/user/${id}`,
     },
     // Skills
     SKILLS: {
