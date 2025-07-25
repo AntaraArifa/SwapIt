@@ -20,6 +20,7 @@ import AddSkills from "./components/pages/Skills/AddSkills";
 import BookSessionForm from "./components/components/SessionBookingForm";
 import LearnerSessions from "./components/pages/Sessions/LearnerSessions";
 import TeacherSessions from "./components/pages/Sessions/TeacherSessions";
+import UserProfile from "./components/pages/General/UserProfile";
 
 const Skills = () => (
   <div className="p-6 text-center">
@@ -53,6 +54,8 @@ const App = () => {
         <Route path="/listings/add" element={<AddListing />} />
         <Route path="/about" element={<About />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:id" element={<UserProfile />} />
+        {/* Authentication Routes */}
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/book-session/:skillId" element={<BookSessionForm />} />

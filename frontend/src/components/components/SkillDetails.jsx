@@ -166,6 +166,43 @@ const SkillDetails = () => {
     }
   };
 
+  const convertTo12Hour = (time24) => {
+    // Handle different time formats
+    const timeStr = time24.toString().trim();
+    
+    // If already in 12-hour format, return as is
+    if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+      return timeStr;
+    }
+    
+    // Parse 24-hour format (e.g., "09:30", "9:30", "0930")
+    let hours, minutes;
+    
+    if (timeStr.includes(':')) {
+      [hours, minutes] = timeStr.split(':');
+    } else if (timeStr.length === 4) {
+      // Handle format like "0930"
+      hours = timeStr.substring(0, 2);
+      minutes = timeStr.substring(2, 4);
+    } else {
+      return timeStr; // Return original if format is unrecognized
+    }
+    
+    hours = parseInt(hours);
+    minutes = parseInt(minutes);
+    
+    // Validate hours and minutes
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return timeStr; // Return original if invalid
+    }
+    
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    
+    return `${displayHours}:${displayMinutes} ${period}`;
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -403,6 +440,23 @@ const SkillDetails = () => {
                 <span className="text-gray-600">Format</span>
                 <span className="font-medium text-gray-900">One-on-One</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Available Slots</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {skill.availableSlots && skill.availableSlots.length > 0 ? (
+                    skill.availableSlots.map((slot, index) => (
+                      <span
+                        key={index}
+                        className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-medium"
+                      >
+                        {convertTo12Hour(slot)}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="font-medium text-gray-900">No slots available</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -462,7 +516,7 @@ const SkillDetails = () => {
             </div>
 
             <button
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate("/profile/" + skill.teacherID._id)}
               className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50"
             >
               View Instructor Profile
