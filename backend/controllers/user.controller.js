@@ -76,6 +76,7 @@ export const login = async (req, res) => {
       phoneNumber: user.phoneNumber,
       role: user.role,
       profile: user.profile,
+      createdAt: user.createdAt,
     };
 
     return res
@@ -153,6 +154,7 @@ export const updateProfile = async (req, res) => {
       phoneNumber: user.phoneNumber,
       role: user.role,
       profile: user.profile,
+      createdAt: user.createdAt,
     };
 
     return res.status(200).json({

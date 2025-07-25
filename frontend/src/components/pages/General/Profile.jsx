@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setUser } from '../../../redux/authSlice';
 import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit3 } from 'lucide-react';
-
-const BACKEND_URL = "http://localhost:3000/api/v1"; // ✅ Backend API root
+import { buildApiUrl, API_ENDPOINTS } from '../../../config/api';
 
 const Profile = () => {
   const dispatch = useDispatch();
@@ -66,7 +65,7 @@ const Profile = () => {
       data.append('skills', formData.skills);
       if (profilePhoto) data.append('profilePhoto', profilePhoto);
 
-      const res = await fetch(`${BACKEND_URL}/user/profile/update`, {
+      const res = await fetch(buildApiUrl(API_ENDPOINTS.USER.UPDATE), {
         method: 'POST',
         credentials: 'include',
         body: data
@@ -127,7 +126,19 @@ const Profile = () => {
     setTimeout(() => toast.remove(), 3000);
   };
 
-  const formatDate = (date) => new Date(date).toLocaleDateString();
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    try {
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) return 'N/A';
+      return parsedDate.toLocaleDateString('en-US', { 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    } catch {
+      return 'N/A';
+    }
+  };
 
   if (!user) {
     return <div className="text-center mt-10 text-gray-500">Please log in to view your profile.</div>;
@@ -245,7 +256,7 @@ const Profile = () => {
               )}
             </div>
 
-            <div className="col-span-2">
+            {/* <div className="col-span-2">
               <label className="text-sm text-gray-600">Skills</label>
               {isEditing ? (
                 <input
@@ -265,10 +276,15 @@ const Profile = () => {
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
 
-            <div className="col-span-2 text-sm text-gray-500 mt-4">
-              <p><Calendar className="inline mr-1" size={16} /> Member since: {formatDate(user.createdAt)}</p>
+            <div className="col-span-2 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-sm text-gray-500">
+                  <Calendar className="mr-2" size={16} />
+                  <span>Member since: {formatDate(user.createdAt)}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

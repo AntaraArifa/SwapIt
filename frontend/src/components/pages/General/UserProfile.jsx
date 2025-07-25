@@ -172,7 +172,19 @@ const Profile = () => {
     setTimeout(() => toast.remove(), 3000);
   };
 
-  const formatDate = (date) => new Date(date).toLocaleDateString();
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    try {
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) return 'N/A';
+      return parsedDate.toLocaleDateString('en-US', { 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    } catch {
+      return 'N/A';
+    }
+  };
 
   const isOwnProfile = !userId || (userId === user?._id) || (userId === user?._id?.toString());
   const currentDisplayUser = profileUser;
@@ -299,7 +311,7 @@ const Profile = () => {
               )}
             </div>
 
-            <div className="col-span-2">
+            {/* <div className="col-span-2">
               <label className="text-sm text-gray-600">Skills</label>
               {isEditing && isOwnProfile ? (
                 <input
@@ -323,10 +335,15 @@ const Profile = () => {
                   )}
                 </div>
               )}
-            </div>
+            </div> */}
 
-            <div className="col-span-2 text-sm text-gray-500 mt-4">
-              <p><Calendar className="inline mr-1" size={16} /> Member since: {currentDisplayUser?.createdAt ? formatDate(currentDisplayUser.createdAt) : 'N/A'}</p>
+            <div className="col-span-2 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-sm text-gray-500">
+                  <Calendar className="mr-2" size={16} />
+                  <span>Member since: {currentDisplayUser?.createdAt ? formatDate(currentDisplayUser.createdAt) : 'N/A'}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
