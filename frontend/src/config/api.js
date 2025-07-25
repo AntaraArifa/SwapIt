@@ -18,6 +18,7 @@ const API_CONFIG = {
       BY_ID: (id) => `/listings/single/${id}`,
       TAGS: '/listings/tags',
       CREATE: '/listings/create',
+      UPDATE: (id) => `/listings/update/${id}`,
     },
     // User Authentication
     AUTH: {

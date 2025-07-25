@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Star, BookOpen, MessageCircle, Calendar, Award } from "lucide-react";
+import { useSelector } from "react-redux";
+import { Star, BookOpen, MessageCircle, Calendar, Award, Edit } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
 
 const SkillDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const user = useSelector(state => state.auth.user);
   const [skill, setSkill] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -384,17 +386,28 @@ const SkillDetails = () => {
               <span className="text-lg text-gray-600">/session</span>
             </div>
             <div className="space-y-3">
-              <button
-                onClick={() =>
-                  navigate(`/book-session/${skill._id}`, {
-                    state: { teacherID: skill.teacherID._id }, // pass teacherID here
-                  })
-                }
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
-              >
-                <Calendar className="h-4 w-4" />
-                Book a Session
-              </button>
+              {/* Check if current user is the listing owner */}
+              {user && skill.teacherID._id === user._id ? (
+                <button
+                  onClick={() => navigate(`/edit-listing/${skill._id}`)}
+                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 flex items-center justify-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit Listing
+                </button>
+              ) : (
+                <button
+                  onClick={() =>
+                    navigate(`/book-session/${skill._id}`, {
+                      state: { teacherID: skill.teacherID._id }, // pass teacherID here
+                    })
+                  }
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Book a Session
+                </button>
+              )}
 
               <button className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
                 <MessageCircle className="h-4 w-4" />
