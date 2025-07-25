@@ -114,13 +114,18 @@ export const logout = async (req, res) => {
 // Update Profile Controller
 export const updateProfile = async (req, res) => {
   try {
-    const { fullname, email, phoneNumber, bio, skills } = req.body;
+    console.log('Update profile request body:', req.body);
+    console.log('Update profile files:', req.files);
+    console.log('User from token:', req.user);
+    
+    const { fullname, email, phoneNumber, bio } = req.body;
     const resume = req.files?.file?.[0];
     const profilePic = req.files?.profilePhoto?.[0];
 
-    const userId = req.id;
+    const userId = req.user.userId;
     let user = await User.findById(userId);
     if (!user) {
+      console.log('User not found with ID:', userId);
       return res.status(400).json({ message: "User not found", success: false });
     }
 
@@ -130,7 +135,6 @@ export const updateProfile = async (req, res) => {
     if (email) user.email = email;
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (bio) user.profile.bio = bio;
-    if (skills) user.profile.skills = skills.split(',').map(s => s.trim());
 
     if (resume) {
       const fileUri = getDataUri(resume);

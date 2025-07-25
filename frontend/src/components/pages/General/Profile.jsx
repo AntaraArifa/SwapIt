@@ -62,7 +62,6 @@ const Profile = () => {
       data.append('email', formData.email);
       data.append('phoneNumber', formData.phoneNumber);
       data.append('bio', formData.bio);
-      data.append('skills', formData.skills);
       if (profilePhoto) data.append('profilePhoto', profilePhoto);
 
       const res = await fetch(buildApiUrl(API_ENDPOINTS.USER.UPDATE), {
