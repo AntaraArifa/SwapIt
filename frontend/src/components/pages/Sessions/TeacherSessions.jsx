@@ -5,6 +5,7 @@ import {
   proposeSessionReschedule,
 } from "../../../config/api";
 import { getSkillListingById } from "../../../config/skillListing";
+import axios from "axios";
 
 const TeacherSessions = () => {
   const [sessions, setSessions] = useState([]);
@@ -63,6 +64,14 @@ const TeacherSessions = () => {
     } catch (err) {
       console.error("Failed to propose reschedule:", err);
     }
+  };
+  const isSessionNow = (scheduledTime) => {
+    if (!scheduledTime) return false;
+    const now = new Date();
+    const scheduled = new Date(scheduledTime);
+    const diff = Math.abs(now - scheduled); // difference in milliseconds
+    const threshold = 60* 60 * 1000; // 5 minutes
+    return diff <= threshold;
   };
 
   return (
@@ -238,6 +247,34 @@ const TeacherSessions = () => {
                   </div>
                 </div>
               )}
+              {session.status === "accepted" &&
+                isSessionNow(session.scheduledTime) && (
+                  <button
+                    className="bg-blue-500 text-white px-4 py-1.5 rounded hover:bg-blue-600 mt-2"
+                    onClick={async () => {
+                      const roomCode = Math.random()
+                        .toString(36)
+                        .substring(2, 10);
+                      const link = `http://localhost:5173/meeting/${roomCode}`;
+                      try {
+                        await axios.post(
+                          "http://localhost:3000/api/v1/notification/send",
+                          {
+                            recipient: session.learnerID._id,
+                            message: `Your session is starting now! Click below to join.`,
+                            meetingLink: link,
+                          },
+                          { withCredentials: true }
+                        );
+                        window.open(link, "_blank");
+                      } catch (err) {
+                        console.error("Failed to send session link", err);
+                      }
+                    }}
+                  >
+                    Start Session
+                  </button>
+                )}
             </li>
           ))}
         </ul>

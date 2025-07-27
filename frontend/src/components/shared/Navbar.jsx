@@ -4,15 +4,21 @@ import { Menu, X, User, LogOut, Settings } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { setUser } from "../../redux/authSlice";
 import { toast } from "sonner";
+import axios from "axios";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const isLoggedIn = !!user;
+  const POLLING_INTERVAL = 5000;
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Determine sessions link based on user role
   const sessionsLink =
@@ -34,6 +40,54 @@ const Navbar = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+  useEffect(() => {
+    let intervalId;
+
+    const fetchNotifications = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/api/v1/notification/get",
+          {
+            withCredentials: true,
+          }
+        );
+
+        console.log("Fetched notifications:", response.data);
+
+        if (Array.isArray(response.data.notifications)) {
+          dispatch(setNotifications(response.data.notifications));
+        } else {
+          console.error("Unexpected API response:", response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+    intervalId = setInterval(fetchNotifications, POLLING_INTERVAL);
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, [dispatch]);
+
+  useEffect(() => {
+    const unread = notifications.filter((n) => !n.read).length;
+    setUnreadCount(unread);
+  }, [notifications]);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -82,6 +136,84 @@ const Navbar = () => {
             )}
             {/* About always last */}
             {renderNavLink({ name: "About", href: "/about" })}
+            {isLoggedIn && (
+              <div className="relative" ref={notificationRef}>
+                <button
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    axios
+                      .patch(
+                        "http://localhost:3000/api/v1/notification/mark-as-read",
+                        {},
+                        { withCredentials: true }
+                      )
+                      .then(() => {
+                        setUnreadCount(0);
+                        setNotifications((prev) =>
+                          prev.map((n) => ({ ...n, read: true }))
+                        );
+                      })
+                      .catch((err) =>
+                        console.error("Failed to mark as read", err)
+                      );
+                  }}
+                  className="relative focus:outline-none"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-gray-700"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-96 bg-white border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <p className="p-4 text-gray-500 text-sm">
+                        No notifications
+                      </p>
+                    ) : (
+                      <ul className="divide-y">
+                        {notifications.map((notif) => (
+                          <li key={notif._id} className="p-4 space-y-1">
+                            <p className="text-sm text-gray-800 font-medium">
+                              {notif.sender?.fullname || "Someone"}:{" "}
+                              {notif.message}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(notif.createdAt).toLocaleString()}
+                            </p>
+                            <a
+                              href={notif.meetingLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 text-sm font-semibold hover:underline"
+                            >
+                              Join Meeting
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {isLoggedIn ? (
               <div className="relative ml-4" ref={dropdownRef}>
                 <button

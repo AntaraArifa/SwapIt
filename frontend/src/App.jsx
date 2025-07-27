@@ -22,6 +22,7 @@ import LearnerSessions from "./components/pages/Sessions/LearnerSessions";
 import TeacherSessions from "./components/pages/Sessions/TeacherSessions";
 import UserProfile from "./components/pages/General/UserProfile";
 import EditListings from "./components/pages/Skills/edit/page";
+import { MeetingPage } from "./components/pages/VideoCall/MeetingPage";
 
 const Skills = () => (
   <div className="p-6 text-center">
@@ -63,7 +64,7 @@ const App = () => {
         <Route path="/sessions/learner" element={<LearnerSessions />} />
         <Route path="/sessions/teacher" element={<TeacherSessions />} />
         <Route path="/edit-listing/:id" element={<EditListings />} />
-
+        <Route path="/meeting/:roomCode" element={<MeetingPage />} />
         <Route
           path="*"
           element={<div className="text-center p-6">404 - Page Not Found</div>}
