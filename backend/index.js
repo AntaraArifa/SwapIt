@@ -9,6 +9,7 @@ import skillRoutes from "./routes/skillRoutes.js"; // Example for skills route
 import listingRoutes from "./routes/listingRoutes.js"; // Import skill listing routes
 import sessionRoutes from "./routes/sessionRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js"; 
+import ratingRoutes from "./routes/ratingRoutes.js"; // Import rating routes
 
 
 // Initialize environment variables
@@ -38,6 +39,7 @@ app.use('/api/v1/skills', skillRoutes); // Example for skills route
 app.use('/api/v1/listings', listingRoutes); // Mount skill listing routes
 app.use('/api/v1/sessions', sessionRoutes);
 app.use('/api/v1/notification',notificationRoutes);
+app.use('/api/v1/ratings', ratingRoutes); // Mount rating routes
 
 
 
