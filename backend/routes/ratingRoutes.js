@@ -37,4 +37,7 @@ router.get('/user/:userId', isAuthenticated, ratingController.getRatingsByUserId
 // Get all ratings given by a specific learner (ratings BY learner)
 router.get('/learner/:learnerId', isAuthenticated, ratingController.getRatingsByLearnerId);
 
+// Get average ratings for a specific teacher
+router.get('/teacher/:teacherId/average', isAuthenticated, ratingController.getAverageRatingsByTeacherId);
+
 export default router;

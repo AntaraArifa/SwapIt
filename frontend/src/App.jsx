@@ -28,6 +28,7 @@ import { MeetingPage } from "./components/pages/VideoCall/MeetingPage"
 import RatingReviewPage from "./components/pages/Rating/RatingReviewPage"
 import RatingsReviews from "./components/pages/General/RatingsReviews"
 import UserRatingsReviews from "./components/pages/General/UserRatingsReviews"
+import TeacherReviews from "./components/pages/General/TeacherReviews"
 
 const Skills = () => (
   <div className="p-6 text-center">
@@ -62,6 +63,7 @@ const App = () => {
         <Route path="/about" element={<About />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/ratings-reviews" element={<RatingsReviews />} />
+        <Route path="/profile/reviews" element={<TeacherReviews />} />
         <Route path="/profile/user-ratings/:userId" element={<UserRatingsReviews />} />
         <Route path="/profile/:id" element={<UserProfile />} />
         {/* Authentication Routes */}

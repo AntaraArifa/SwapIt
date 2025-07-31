@@ -433,6 +433,38 @@ export const getMyReviews = async (req, res) => {
     }
 };
 
+// Get reviews received by current user (when they were a teacher)
+export const getMyReceivedReviews = async (req, res) => {
+    try {
+        const userId = req.user.userId; // From middleware
+
+        console.log("=== getMyReceivedReviews Debug Info ===");
+        console.log("User ID:", userId);
+
+        // Get all reviews where this user was the teacher
+        const reviews = await Review.find({ teacherID: userId })
+            .populate('learnerID', 'fullname email profile.profilePhoto')
+            .populate('listingID', 'title description fee')
+            .sort({ createdAt: -1 });
+
+        console.log("Found received reviews:", reviews.length);
+
+        return res.status(200).json({
+            message: "Teacher received reviews retrieved successfully",
+            success: true,
+            reviews,
+            count: reviews.length
+        });
+
+    } catch (error) {
+        console.error("Error getting teacher received reviews:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
+    }
+};
+
 // Get reviews by specific user ID (for viewing other user's reviews)
 export const getReviewsByUserId = async (req, res) => {
     try {

@@ -518,3 +518,133 @@ export const getMyReceivedRatings = async (req, res) => {
     }
 };
 
+// Get average ratings for a specific teacher
+export const getAverageRatingsByTeacherId = async (req, res) => {
+    try {
+        console.log("=== getAverageRatingsByTeacherId Debug Info ===");
+        console.log("Request URL:", req.originalUrl);
+        console.log("Request params:", req.params);
+        
+        const { teacherId } = req.params;
+        console.log("Extracted teacherId:", teacherId);
+
+        // Validate teacher ID format (MongoDB ObjectId should be 24 characters)
+        if (!teacherId) {
+            return res.status(400).json({
+                message: "Teacher ID is required",
+                success: false
+            });
+        }
+
+        if (teacherId.length !== 24) {
+            return res.status(400).json({
+                message: "Invalid teacher ID format",
+                success: false
+            });
+        }
+
+        // Check if teacher exists
+        console.log("Looking for teacher with ID:", teacherId);
+        const teacher = await User.findById(teacherId);
+        if (!teacher) {
+            console.log("Teacher not found in database");
+            return res.status(404).json({
+                message: "Teacher not found",
+                success: false
+            });
+        }
+
+        // Verify the user is actually a teacher
+        if (teacher.role !== 'teacher') {
+            return res.status(400).json({
+                message: "This user is not a teacher",
+                success: false
+            });
+        }
+
+        console.log("Teacher found:", teacher.fullname);
+
+        // Get all ratings received by this teacher
+        const ratings = await Rating.find({ teacherID: teacherId })
+            .populate('learnerID', 'fullname email')
+            .populate('listingID', 'title description fee')
+            .sort({ createdAt: -1 });
+
+        console.log("Found ratings for teacher:", ratings.length);
+
+        // Check if there are any ratings
+        if (ratings.length === 0) {
+            return res.status(200).json({
+                message: `${teacher.fullname} has not received any ratings yet`,
+                success: true,
+                averageRating: null,
+                totalRatings: 0,
+                ratings: [],
+                teacher: {
+                    id: teacher._id,
+                    fullname: teacher.fullname,
+                    email: teacher.email
+                },
+                note: "This teacher hasn't received any ratings yet"
+            });
+        }
+
+        // Calculate average rating
+        const totalRating = ratings.reduce((sum, rating) => sum + rating.rating, 0);
+        const averageRating = parseFloat((totalRating / ratings.length).toFixed(1));
+
+        // Calculate rating distribution
+        const ratingDistribution = {
+            1: ratings.filter(r => r.rating === 1).length,
+            2: ratings.filter(r => r.rating === 2).length,
+            3: ratings.filter(r => r.rating === 3).length,
+            4: ratings.filter(r => r.rating === 4).length,
+            5: ratings.filter(r => r.rating === 5).length
+        };
+
+        // Get unique skills taught (from listings)
+        const uniqueSkills = [...new Set(ratings.map(r => r.listingID?._id?.toString()))];
+        
+        // Get recent ratings (last 5)
+        const recentRatings = ratings.slice(0, 5);
+
+        console.log("Calculated average rating:", averageRating);
+
+        return res.status(200).json({
+            message: `Average ratings for ${teacher.fullname} retrieved successfully`,
+            success: true,
+            averageRating,
+            totalRatings: ratings.length,
+            teacher: {
+                id: teacher._id,
+                fullname: teacher.fullname,
+                email: teacher.email,
+                role: teacher.role
+            },
+            ratingDistribution,
+            uniqueSkillsCount: uniqueSkills.length,
+            recentRatings: recentRatings.map(rating => ({
+                _id: rating._id,
+                rating: rating.rating,
+                learner: rating.learnerID?.fullname,
+                skill: rating.listingID?.title,
+                createdAt: rating.createdAt
+            })),
+            statistics: {
+                highestRating: Math.max(...ratings.map(r => r.rating)),
+                lowestRating: Math.min(...ratings.map(r => r.rating)),
+                ratingsAbove4: ratings.filter(r => r.rating >= 4).length,
+                ratingsBelow3: ratings.filter(r => r.rating <= 2).length
+            }
+        });
+
+    } catch (error) {
+        console.error("Error getting average ratings by teacher ID:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: error.message
+        });
+    }
+};
+

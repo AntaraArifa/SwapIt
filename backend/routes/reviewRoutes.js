@@ -16,6 +16,9 @@ router.delete('/delete/:id', isAuthenticated, reviewController.deleteReview);
 // Get user's own reviews (must come before /:id route)
 router.get('/user/my-reviews', isAuthenticated, reviewController.getMyReviews);
 
+// Get reviews received by current user (when they were a teacher)
+router.get('/user/my-received-reviews', isAuthenticated, reviewController.getMyReceivedReviews);
+
 // Debug route to check existing reviews
 router.get('/debug/check-existing', isAuthenticated, reviewController.checkExistingReviews);
 

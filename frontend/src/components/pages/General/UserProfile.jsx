@@ -22,6 +22,8 @@ const Profile = () => {
     skills: '',
   });
   const [profilePhoto, setProfilePhoto] = useState(null);
+  const [averageRating, setAverageRating] = useState(null);
+  const [loadingRating, setLoadingRating] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -53,6 +55,11 @@ const Profile = () => {
               bio: data.user.profile?.bio || '',
               skills: data.user.profile?.skills ? data.user.profile.skills.join(', ') : '',
             });
+            
+            // Fetch average rating if user is a teacher
+            if (data.user.role === 'teacher') {
+              fetchAverageRating(data.user._id);
+            }
           } else {
             showToast(data.message || 'User not found', 'error');
           }
@@ -71,12 +78,43 @@ const Profile = () => {
             bio: user.profile?.bio || '',
             skills: user.profile?.skills ? user.profile.skills.join(', ') : '',
           });
+          
+          // Fetch average rating if current user is a teacher
+          if (user.role === 'teacher') {
+            fetchAverageRating(user._id);
+          }
         }
       }
     };
 
     fetchUserProfile();
   }, [user, userId]);
+
+  const fetchAverageRating = async (teacherId) => {
+    setLoadingRating(true);
+    try {
+      const token = localStorage.getItem('token') || user?.token;
+      const response = await fetch(buildApiUrl(`/ratings/teacher/${teacherId}/average`), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setAverageRating(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching average rating:', error);
+    } finally {
+      setLoadingRating(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -310,6 +348,30 @@ const Profile = () => {
               <label className="text-sm text-gray-600">Account Type</label>
               <p className="mt-1 font-medium capitalize">{currentDisplayUser?.role || 'N/A'}</p>
             </div>
+
+            {/* Average Rating Display for Teachers */}
+            {currentDisplayUser?.role === 'teacher' && (
+              <div>
+                <label className="text-sm text-gray-600">Average Rating</label>
+                {loadingRating ? (
+                  <p className="mt-1 text-gray-500">Loading...</p>
+                ) : averageRating ? (
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      <span className="font-semibold text-lg">
+                        {averageRating.averageRating.toFixed(1)}
+                      </span>
+                    </div>
+                    <span className="text-gray-600">
+                      ({averageRating.totalRatings} {averageRating.totalRatings === 1 ? 'rating' : 'ratings'})
+                    </span>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-gray-500">No ratings yet</p>
+                )}
+              </div>
+            )}
 
             <div className="col-span-2">
               <label className="text-sm text-gray-600">Bio</label>
