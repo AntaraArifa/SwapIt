@@ -6,6 +6,7 @@ const authSlice = createSlice({
     initialState: {
         loading: false,
         user: null,
+        notifications: [],
     },
     reducers: {
         setLoading: (state, action) => {
@@ -14,8 +15,14 @@ const authSlice = createSlice({
         setUser: (state, action) => {
             state.user = action.payload;
         },
+        setNotifications: (state, action) => {
+            state.notifications = action.payload;
+        },
+        clearNotifications: (state) => {
+            state.notifications = [];
+        },
     },
 });
 
-export const { setLoading, setUser } = authSlice.actions;
+export const { setLoading, setUser, setNotifications, clearNotifications } = authSlice.actions;
 export default authSlice.reducer;

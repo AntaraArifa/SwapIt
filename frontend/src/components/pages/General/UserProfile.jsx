@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { setUser } from '../../../redux/authSlice';
-import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit3 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit3, Star, MessageSquare } from 'lucide-react';
 import { buildApiUrl, API_ENDPOINTS } from '../../../config/api';
 
 const Profile = () => {
   const { id: userId } = useParams(); // Get userId from URL params (using 'id' from route)
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector(state => state.auth.user);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -204,26 +205,40 @@ const Profile = () => {
           <h2 className="text-2xl font-bold">
             {isOwnProfile ? 'My Profile' : `${currentDisplayUser?.fullname || 'User'}'s Profile`}
           </h2>
-          {isOwnProfile && !isEditing ? (
-            <button onClick={() => setIsEditing(true)} className="text-indigo-600 hover:underline flex items-center">
-              <Edit3 size={16} className="mr-1" /> Edit
-            </button>
-          ) : isOwnProfile && isEditing ? (
-            <div className="space-x-2">
+          <div className="flex items-center gap-3">
+            {/* Ratings & Reviews Button - Show when viewing a learner's profile */}
+            {currentDisplayUser?.role === "learner" && (
               <button
-                onClick={handleSave}
-                disabled={loading}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+                onClick={() => navigate(`/profile/user-ratings/${currentDisplayUser._id}`)}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium"
               >
-                <Save size={16} className="inline mr-2" />
-                {loading ? 'Saving...' : 'Save'}
+                <Star size={16} />
+                <MessageSquare size={16} />
+                View Ratings & Reviews
               </button>
-              <button
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >Cancel</button>
-            </div>
-          ) : null}
+            )}
+            {/* Edit Profile Button - Only show for own profile */}
+            {isOwnProfile && !isEditing ? (
+              <button onClick={() => setIsEditing(true)} className="text-indigo-600 hover:underline flex items-center">
+                <Edit3 size={16} className="mr-1" /> Edit
+              </button>
+            ) : isOwnProfile && isEditing ? (
+              <div className="space-x-2">
+                <button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+                >
+                  <Save size={16} className="inline mr-2" />
+                  {loading ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                >Cancel</button>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-6 flex flex-col md:flex-row gap-6">

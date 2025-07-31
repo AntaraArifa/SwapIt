@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { setUser } from '../../../redux/authSlice';
-import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit3 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit3, Star, MessageSquare } from 'lucide-react';
 import { buildApiUrl, API_ENDPOINTS } from '../../../config/api';
 
 const Profile = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector(state => state.auth.user);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -148,26 +150,40 @@ const Profile = () => {
       <div className="bg-white rounded shadow p-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">My Profile</h2>
-          {!isEditing ? (
-            <button onClick={() => setIsEditing(true)} className="text-indigo-600 hover:underline flex items-center">
-              <Edit3 size={16} className="mr-1" /> Edit
-            </button>
-          ) : (
-            <div className="space-x-2">
+          <div className="flex items-center gap-3">
+            {/* Ratings & Reviews Button */}
+            {user.role === "learner" && (
               <button
-                onClick={handleSave}
-                disabled={loading}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+                onClick={() => navigate('/profile/ratings-reviews')}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium"
               >
-                <Save size={16} className="inline mr-2" />
-                {loading ? 'Saving...' : 'Save'}
+                <Star size={16} />
+                <MessageSquare size={16} />
+                Ratings & Reviews
               </button>
-              <button
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >Cancel</button>
-            </div>
-          )}
+            )}
+            {/* Edit Profile Button */}
+            {!isEditing ? (
+              <button onClick={() => setIsEditing(true)} className="text-indigo-600 hover:underline flex items-center">
+                <Edit3 size={16} className="mr-1" /> Edit
+              </button>
+            ) : (
+              <div className="space-x-2">
+                <button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+                >
+                  <Save size={16} className="inline mr-2" />
+                  {loading ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                >Cancel</button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 flex flex-col md:flex-row gap-6">

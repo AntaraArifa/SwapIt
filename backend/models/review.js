@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const ratingSchema = new mongoose.Schema({
+const reviewSchema = new mongoose.Schema({
     learnerID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', // reference to the User model
@@ -11,10 +11,16 @@ const ratingSchema = new mongoose.Schema({
         ref: 'User', // reference to the User model
         required: true
     },
-    listingID:{
+    listingID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SkillListing', // reference to the SkillListing model
         required: true
+    },
+    reviewText: {
+        type: String,
+        required: true,
+        minlength: 10,
+        maxlength: 1000
     },
     rating: {
         type: Number,
@@ -24,6 +30,6 @@ const ratingSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-const Rating = mongoose.model('Rating', ratingSchema);
+const Review = mongoose.model('Review', reviewSchema);
 
-export default Rating;
+export default Review;

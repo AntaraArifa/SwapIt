@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, User, LogOut, Settings } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
-import { setUser } from "../../redux/authSlice";
+import { setUser, setNotifications } from "../../redux/authSlice";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -14,9 +14,9 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const notifications = useSelector((state) => state.auth.notifications);
   const isLoggedIn = !!user;
   const POLLING_INTERVAL = 5000;
-  const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 

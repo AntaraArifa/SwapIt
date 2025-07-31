@@ -113,11 +113,11 @@ export const createRating = async (req, res) => {
 // Update Rating Function
 export const updateRating = async (req, res) => {
     try {
-        const { ratingId } = req.params;
+        const { id } = req.params;
         const { rating } = req.body;
 
         // Validate rating ID
-        if (!ratingId) {
+        if (!id) {
             return res.status(400).json({
                 message: "Rating ID is required",
                 success: false
@@ -133,7 +133,7 @@ export const updateRating = async (req, res) => {
         }
 
         // Find the existing rating
-        const existingRating = await Rating.findById(ratingId);
+        const existingRating = await Rating.findById(id);
         if (!existingRating) {
             return res.status(404).json({
                 message: "Rating not found",
@@ -145,20 +145,20 @@ export const updateRating = async (req, res) => {
         existingRating.rating = rating;
         await existingRating.save();
 
-        // Populate the updated rating with related data
-        const populatedRating = await Rating.findById(existingRating._id)
-            .populate('learnerID', 'fullname email')
-            .populate('teacherID', 'fullname email')
-            .populate('listingID', 'title');
-
         return res.status(200).json({
             message: "Rating updated successfully",
             success: true,
-            rating: populatedRating
+            rating: {
+                _id: existingRating._id,
+                rating: existingRating.rating
+            }
         });
 
     } catch (error) {
         console.error("Error updating rating:", error);
+        console.error("Error stack:", error.stack);
+        console.error("Request params:", req.params);
+        console.error("Request body:", req.body);
         return res.status(500).json({
             message: "Internal server error",
             success: false
@@ -169,34 +169,55 @@ export const updateRating = async (req, res) => {
 // Delete Rating Function
 export const deleteRating = async (req, res) => {
     try {
-        const { ratingId } = req.params;
+        const { id } = req.params;
+        const userId = req.user.userId; // From middleware
 
         // Validate rating ID
-        if (!ratingId) {
+        if (!id) {
             return res.status(400).json({
                 message: "Rating ID is required",
                 success: false
             });
         }
 
-        // Find and delete the rating
-        const deletedRating = await Rating.findByIdAndDelete(ratingId);
-        if (!deletedRating) {
+        // Validate ID format (MongoDB ObjectId should be 24 characters)
+        if (id.length !== 24) {
+            return res.status(400).json({
+                message: "Invalid rating ID format",
+                success: false
+            });
+        }
+
+        // First find the rating to check ownership
+        const rating = await Rating.findById(id);
+        if (!rating) {
             return res.status(404).json({
                 message: "Rating not found",
                 success: false
             });
         }
 
+        // Check if the current user owns this rating (only the learner who created it can delete it)
+        if (rating.learnerID.toString() !== userId) {
+            return res.status(403).json({
+                message: "You can only delete your own ratings",
+                success: false
+            });
+        }
+
+        // Delete the rating
+        await Rating.findByIdAndDelete(id);
+
         return res.status(200).json({
             message: "Rating deleted successfully",
             success: true,
             deletedRating: {
-                _id: deletedRating._id,
-                learnerID: deletedRating.learnerID,
-                teacherID: deletedRating.teacherID,
-                listingID: deletedRating.listingID,
-                rating: deletedRating.rating
+                _id: rating._id,
+                learnerID: rating.learnerID,
+                teacherID: rating.teacherID,
+                listingID: rating.listingID,
+                rating: rating.rating,
+                deletedAt: new Date()
             }
         });
 
@@ -204,7 +225,8 @@ export const deleteRating = async (req, res) => {
         console.error("Error deleting rating:", error);
         return res.status(500).json({
             message: "Internal server error",
-            success: false
+            success: false,
+            error: error.message
         });
     }
 };
@@ -229,17 +251,20 @@ export const getRatingsByListing = async (req, res) => {
             .populate('listingID', 'title')
             .sort({ createdAt: -1 }); // Sort by newest first
 
-        // Calculate average rating
-        const averageRating = ratings.length > 0 
-            ? ratings.reduce((sum, rating) => sum + rating.rating, 0) / ratings.length 
-            : 0;
+        // Calculate average rating only if there are at least 5 ratings
+        let averageRating = null;
+        if (ratings.length >= 5) {
+            averageRating = parseFloat((ratings.reduce((sum, rating) => sum + rating.rating, 0) / ratings.length).toFixed(1));
+        }
 
         return res.status(200).json({
             message: "Ratings retrieved successfully",
             success: true,
             ratings: ratings,
             totalRatings: ratings.length,
-            averageRating: parseFloat(averageRating.toFixed(1))
+            averageRating: averageRating,
+            minimumRequired: 5,
+            note: ratings.length < 5 ? "At least 5 ratings are required to show average rating" : null
         });
 
     } catch (error) {
@@ -269,15 +294,26 @@ export const getAverageRating = async (req, res) => {
         // Find all ratings for the listing
         const ratings = await Rating.find({ listingID: listingId });
 
+        // Check if there are at least 5 ratings
+        if (ratings.length < 5) {
+            return res.status(200).json({
+                message: "Average rating not available yet",
+                success: true,
+                averageRating: null,
+                totalRatings: ratings.length,
+                minimumRequired: 5,
+                note: "At least 5 ratings are required to show average rating"
+            });
+        }
+
         // Calculate average rating
-        const averageRating = ratings.length > 0 
-            ? ratings.reduce((sum, rating) => sum + rating.rating, 0) / ratings.length 
-            : 0;
+        const averageRating = ratings.reduce((sum, rating) => sum + rating.rating, 0) / ratings.length;
 
         return res.status(200).json({
             message: "Average rating retrieved successfully",
             success: true,
-            averageRating: parseFloat(averageRating.toFixed(1))
+            averageRating: parseFloat(averageRating.toFixed(1)),
+            totalRatings: ratings.length
         });
 
     } catch (error) {
@@ -285,6 +321,199 @@ export const getAverageRating = async (req, res) => {
         return res.status(500).json({
             message: "Internal server error",
             success: false
+        });
+    }
+};
+
+// Get user's own ratings
+export const getMyRatings = async (req, res) => {
+    try {
+        const userId = req.user.userId; // From middleware
+
+        // Get all ratings by this user
+        const ratings = await Rating.find({ learnerID: userId })
+            .populate('teacherID', 'fullname email')
+            .populate('listingID', 'title description fee')
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            message: "User ratings retrieved successfully",
+            success: true,
+            ratings
+        });
+
+    } catch (error) {
+        console.error("Error getting user ratings:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
+    }
+};
+
+// Get ratings by specific user ID (for viewing other user's ratings)
+export const getRatingsByUserId = async (req, res) => {
+    try {
+        console.log("=== getRatingsByUserId Debug Info ===");
+        console.log("Request URL:", req.originalUrl);
+        console.log("Request params:", req.params);
+        console.log("Request method:", req.method);
+        
+        const { userId } = req.params;
+        console.log("Extracted userId:", userId);
+
+        // Validate user ID format (MongoDB ObjectId should be 24 characters)
+        if (!userId) {
+            return res.status(400).json({
+                message: "User ID is required",
+                success: false
+            });
+        }
+
+        if (userId.length !== 24) {
+            return res.status(400).json({
+                message: "Invalid user ID format",
+                success: false
+            });
+        }
+
+        // Check if user exists
+        console.log("Looking for user with ID:", userId);
+        const user = await User.findById(userId);
+        if (!user) {
+            console.log("User not found in database");
+            return res.status(404).json({
+                message: "User not found",
+                success: false
+            });
+        }
+
+        console.log("User found:", user.fullname);
+
+        // Get all ratings by this specific user
+        const ratings = await Rating.find({ learnerID: userId })
+            .populate('teacherID', 'fullname email')
+            .populate('listingID', 'title description fee')
+            .sort({ createdAt: -1 });
+
+        console.log("Found ratings count:", ratings.length);
+
+        return res.status(200).json({
+            message: "User ratings retrieved successfully",
+            success: true,
+            ratings,
+            user: {
+                id: user._id,
+                fullname: user.fullname,
+                email: user.email
+            }
+        });
+
+    } catch (error) {
+        console.error("Error getting ratings by user ID:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+// Get all ratings given by a specific learner (ratings BY learner ID)
+export const getRatingsByLearnerId = async (req, res) => {
+    try {
+        console.log("=== getRatingsByLearnerId Debug Info ===");
+        console.log("Request URL:", req.originalUrl);
+        console.log("Request params:", req.params);
+        
+        const { learnerId } = req.params;
+        console.log("Extracted learnerId:", learnerId);
+
+        // Validate learner ID format (MongoDB ObjectId should be 24 characters)
+        if (!learnerId) {
+            return res.status(400).json({
+                message: "Learner ID is required",
+                success: false
+            });
+        }
+
+        // if (learnerId.length !== 2) {
+        //     return res.status(400).json({
+        //         message: "Invalid learner ID format",
+        //         success: false
+        //     });
+        // }
+
+        const learner = await User.findOne({ _id: learnerId });
+
+        // Check if learner exists
+        console.log("Looking for learner with ID:", learnerId);
+        if (!learner) {
+            console.log("Learner not found in database");
+            return res.status(404).json({
+                message: "Learner not found",
+                success: false
+            });
+        }
+
+        console.log("Learner found:", learner.fullname);
+
+        // Get all ratings given BY this specific learner
+        const ratings = await Rating.find({ learnerID: learnerId })
+            .populate('teacherID', 'fullname email profilePicture')
+            .populate('listingID', 'title description fee category')
+            .sort({ createdAt: -1 });
+
+        console.log("Found ratings given by learner:", ratings.length);
+
+        return res.status(200).json({
+            message: `Ratings given by ${learner.fullname} retrieved successfully`,
+            success: true,
+            ratings,
+            learner: {
+                id: learner._id,
+                fullname: learner.fullname,
+                email: learner.email
+            },
+            totalRatings: ratings.length
+        });
+
+    } catch (error) {
+        console.error("Error getting ratings by learner ID:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+// Get all ratings received by the current logged-in user (when they were a teacher)
+export const getMyReceivedRatings = async (req, res) => {
+    try {
+        const userId = req.user.userId; // From middleware
+
+        console.log("Getting ratings received by current user as teacher:", userId);
+
+        // Get all ratings received BY the current user (when they were a teacher)
+        const ratings = await Rating.find({ teacherID: userId })
+            .populate('learnerID', 'fullname email profilePicture')
+            .populate('listingID', 'title description fee category')
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            message: "Ratings you received as a teacher retrieved successfully",
+            success: true,
+            ratings,
+            totalRatings: ratings.length
+        });
+
+    } catch (error) {
+        console.error("Error getting user's received ratings:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: error.message
         });
     }
 };
