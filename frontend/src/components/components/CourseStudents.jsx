@@ -10,6 +10,7 @@ const CourseStudents = ({ courseId }) => {
     const [count, setCount] = useState(0);
     const [approvingId, setApprovingId] = useState(null);
     const [completingId, setCompletingId] = useState(null);
+    const [activeTab, setActiveTab] = useState('all');
 
     useEffect(() => {
         if (courseId && user?._id) {
@@ -52,7 +53,13 @@ const CourseStudents = ({ courseId }) => {
             const data = await response.json();
 
             if (data.success) {
-                setStudents(data.data);
+                // Sort by most recent (createdAt or _id)
+                const sortedStudents = data.data.sort((a, b) => {
+                    const dateA = new Date(a.createdAt || a._id);
+                    const dateB = new Date(b.createdAt || b._id);
+                    return dateB - dateA; // Most recent first
+                });
+                setStudents(sortedStudents);
                 setCount(data.count);
             } else {
                 toast.error(data.message);
@@ -219,6 +226,29 @@ const CourseStudents = ({ courseId }) => {
         );
     };
 
+    // Filter students based on active tab
+    const getFilteredStudents = () => {
+        if (activeTab === 'all') return students;
+        return students.filter(student => {
+            const status = student.courseStatus || student.status;
+            return status === activeTab;
+        });
+    };
+
+    // Get count for each tab
+    const getTabCounts = () => {
+        const counts = {
+            all: students.length,
+            pending: students.filter(s => (s.courseStatus || s.status) === 'pending').length,
+            registered: students.filter(s => (s.courseStatus || s.status) === 'registered').length,
+            completed: students.filter(s => (s.courseStatus || s.status) === 'completed').length
+        };
+        return counts;
+    };
+
+    const tabCounts = getTabCounts();
+    const filteredStudents = getFilteredStudents();
+
     if (loading) {
         return (
             <div className="max-w-6xl mx-auto p-6">
@@ -260,22 +290,62 @@ const CourseStudents = ({ courseId }) => {
                             </div>
                         </div>
                         <div className="bg-blue-50 px-4 py-2 rounded-lg">
-                            <span className="text-blue-700 font-medium">{count} Total</span>
+                            <span className="text-blue-700 font-medium">{filteredStudents.length} Showing</span>
                         </div>
                     </div>
                 </div>
 
+                {/* Tabs */}
+                <div className="px-6 border-b border-gray-200">
+                    <nav className="flex space-x-8">
+                        {[
+                            { id: 'all', label: 'All', count: tabCounts.all },
+                            { id: 'pending', label: 'Pending', count: tabCounts.pending },
+                            { id: 'registered', label: 'Registered', count: tabCounts.registered },
+                            { id: 'completed', label: 'Completed', count: tabCounts.completed }
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                    activeTab === tab.id
+                                        ? 'border-blue-500 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                {tab.label}
+                                {tab.count > 0 && (
+                                    <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
+                                        activeTab === tab.id
+                                            ? 'bg-blue-100 text-blue-600'
+                                            : 'bg-gray-100 text-gray-600'
+                                    }`}>
+                                        {tab.count}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+
                 {/* Students List */}
                 <div className="p-6">
-                    {students.length === 0 ? (
+                    {filteredStudents.length === 0 ? (
                         <div className="text-center py-12">
                             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Yet</h3>
-                            <p className="text-gray-500">Students who register for this course will appear here.</p>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                {activeTab === 'all' ? 'No Students Yet' : `No ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Students`}
+                            </h3>
+                            <p className="text-gray-500">
+                                {activeTab === 'all' 
+                                    ? 'Students who register for this course will appear here.' 
+                                    : `No students with ${activeTab} status found.`
+                                }
+                            </p>
                         </div>
                     ) : (
                         <div className="grid gap-4">
-                            {students.map((registration) => (
+                            {filteredStudents.map((registration) => (
                                 <div key={registration._id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                                     <div className="flex items-start space-x-4">
                                         {/* Profile Picture */}
