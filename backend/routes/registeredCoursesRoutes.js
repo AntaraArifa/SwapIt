@@ -10,4 +10,7 @@ router.post('/register', isAuthenticated, registeredCoursesController.registerCo
 // check course registration status for a student
 router.post('/check', isAuthenticated, registeredCoursesController.checkCourseStatus);
 
+// Get all students registered for a course
+router.post('/students/:courseId', isAuthenticated, registeredCoursesController.getStudentsRegisteredForCourse);
+
 export default router;
