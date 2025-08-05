@@ -109,6 +109,8 @@ const AddListing = () => {
     skillID: "",
     listingImgURL: "",
     availableSlots: [],
+    paymentMethods: [],
+    duration: "",
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -223,6 +225,13 @@ const AddListing = () => {
   const [slotInput, setSlotInput] = useState("");
   const [slotError, setSlotError] = useState("");
 
+  // Payment method input state
+  const [paymentMethodInput, setPaymentMethodInput] = useState({
+    name: "",
+    accountNumber: "",
+  });
+  const [paymentMethodError, setPaymentMethodError] = useState("");
+
   // Helper to validate and add slot
   const handleAddSlot = () => {
     if (!slotInput) {
@@ -262,6 +271,49 @@ const AddListing = () => {
     }));
   };
 
+  // Helper to validate and add payment method
+  const handleAddPaymentMethod = () => {
+    if (!paymentMethodInput.name.trim()) {
+      setPaymentMethodError("Please enter a payment method name");
+      return;
+    }
+    if (!paymentMethodInput.accountNumber.trim()) {
+      setPaymentMethodError("Please enter an account number or ID");
+      return;
+    }
+    
+    // Check for duplicates
+    const isDuplicate = formData.paymentMethods.some(
+      (method) => 
+        method.name.toLowerCase() === paymentMethodInput.name.toLowerCase() &&
+        method.accountNumber === paymentMethodInput.accountNumber
+    );
+    
+    if (isDuplicate) {
+      setPaymentMethodError("This payment method is already added");
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      paymentMethods: [...prev.paymentMethods, {
+        name: paymentMethodInput.name.trim(),
+        accountNumber: paymentMethodInput.accountNumber.trim(),
+      }],
+    }));
+    
+    setPaymentMethodInput({ name: "", accountNumber: "" });
+    setPaymentMethodError("");
+  };
+
+  // Remove payment method
+  const handleRemovePaymentMethod = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      paymentMethods: prev.paymentMethods.filter((_, i) => i !== index),
+    }));
+  };
+
   const validateForm = useCallback(() => {
     const newErrors = {};
 
@@ -280,6 +332,14 @@ const AddListing = () => {
         "Description must be at least 50 characters for better clarity";
     } else if (formData.description.trim().length > 5000) {
       newErrors.description = "Description must be less than 5000 characters";
+    }
+
+    if (!formData.duration.trim()) {
+      newErrors.duration = "Course duration is required";
+    } else if (formData.duration.trim().length < 2) {
+      newErrors.duration = "Duration must be at least 2 characters";
+    } else if (formData.duration.trim().length > 50) {
+      newErrors.duration = "Duration must be less than 50 characters";
     }
 
     if (!formData.skillID) {
@@ -307,6 +367,18 @@ const AddListing = () => {
       }
     }
 
+    if (!formData.paymentMethods || formData.paymentMethods.length === 0) {
+      newErrors.paymentMethods = "At least one payment method is required";
+    } else {
+      // Validate each payment method
+      const invalidMethod = formData.paymentMethods.find(
+        (method) => !method.name.trim() || !method.accountNumber.trim()
+      );
+      if (invalidMethod) {
+        newErrors.paymentMethods = "All payment methods must have both name and account number";
+      }
+    }
+
     return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
   }, [formData]);
 
@@ -329,7 +401,8 @@ const AddListing = () => {
         return (
           formData.title.trim() &&
           formData.description.trim() &&
-          formData.description.trim().length >= 50
+          formData.description.trim().length >= 50 &&
+          formData.duration.trim()
         );
       case 2:
         return (
@@ -339,7 +412,12 @@ const AddListing = () => {
           availableSkills.length > 0
         );
       case 3:
-        return formData.fee && formData.listingImgURL.trim();
+        return (
+          formData.fee && 
+          formData.listingImgURL.trim() && 
+          formData.paymentMethods && 
+          formData.paymentMethods.length > 0
+        );
       default:
         return true;
     }
@@ -366,6 +444,8 @@ const AddListing = () => {
         skillID: formData.skillID,
         listingImgURL: formData.listingImgURL.trim(),
         availableSlots: formData.availableSlots,
+        paymentMethods: formData.paymentMethods,
+        duration: formData.duration.trim(),
       };
 
       // Get token from cookies
@@ -658,6 +738,35 @@ const AddListing = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Duration */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                    Course Duration *
+                  </label>
+                  <input
+                    type="text"
+                    name="duration"
+                    value={formData.duration}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 4 weeks, 2 months, 6 sessions"
+                    className={`w-full px-4 py-4 border-2 rounded-xl text-lg transition-all duration-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 ${
+                      errors.duration
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  />
+                  {errors.duration && (
+                    <div className="flex items-center gap-2 text-red-600 text-sm">
+                      <AlertCircle className="h-4 w-4" />
+                      {errors.duration}
+                    </div>
+                  )}
+                  <p className="text-gray-500 text-sm">
+                    Specify how long your course will take to complete.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -746,11 +855,12 @@ const AddListing = () => {
                       {proficiencyLevels.map((level) => (
                         <label
                           key={level}
-                          className={`flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                          className={`flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 text-center ${
                             formData.proficiency === level
                               ? "border-blue-500 bg-blue-50 text-blue-700"
                               : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                           }`}
+                          style={{ textAlign: 'center', fontSize: '1rem' }}
                         >
                           <input
                             type="radio"
@@ -760,7 +870,7 @@ const AddListing = () => {
                             onChange={handleInputChange}
                             className="sr-only"
                           />
-                          <span className="font-medium">{level}</span>
+                          <span className="font-medium w-full text-center" style={{ textAlign: 'center', marginTop: '.75rem' }}>{level}</span>
                         </label>
                       ))}
                     </div>
@@ -793,7 +903,7 @@ const AddListing = () => {
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                       <Clock className="h-5 w-5 text-blue-600" />
-                      Fee (USD) *
+                      Fee (BDT) *
                     </label>
                     <div className="relative">
                       <input
@@ -811,7 +921,7 @@ const AddListing = () => {
                         }`}
                       />
                       <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">
-                        $
+                        ৳
                       </div>
                     </div>
                     {errors.fee && (
@@ -876,6 +986,105 @@ const AddListing = () => {
                         </div>
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Payment Methods */}
+                <div className="mt-8">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    Payment Methods *
+                  </label>
+                  
+                  <div className="space-y-4">
+                    {/* Add Payment Method Form */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">Add Payment Method</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Payment Method Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={paymentMethodInput.name}
+                            onChange={(e) => setPaymentMethodInput({...paymentMethodInput, name: e.target.value})}
+                            placeholder="e.g., PayPal, Bank Transfer, Venmo"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Account Number/ID *
+                          </label>
+                          <input
+                            type="text"
+                            value={paymentMethodInput.accountNumber}
+                            onChange={(e) => setPaymentMethodInput({...paymentMethodInput, accountNumber: e.target.value})}
+                            placeholder="e.g., user@email.com, 1234567890"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center mt-3">
+                        {paymentMethodError && (
+                          <div className="text-red-600 text-xs flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            {paymentMethodError}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleAddPaymentMethod}
+                          className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-all duration-200"
+                        >
+                          Add Payment Method
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Display Added Payment Methods */}
+                    {formData.paymentMethods && formData.paymentMethods.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Added Payment Methods</h4>
+                        <div className="space-y-2">
+                          {formData.paymentMethods.map((method, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-4">
+                                  <div>
+                                    <span className="text-sm font-medium text-gray-900">{method.name}</span>
+                                    <span className="text-xs text-gray-500 ml-2">({method.accountNumber})</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePaymentMethod(index)}
+                                className="text-red-600 hover:text-red-800 p-1"
+                                aria-label="Remove payment method"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {errors.paymentMethods && (
+                      <div className="flex items-center gap-2 text-red-600 text-sm">
+                        <AlertCircle className="h-4 w-4" />
+                        {errors.paymentMethods}
+                      </div>
+                    )}
+                    
+                    <p className="text-gray-500 text-xs">
+                      Add at least one payment method for students to pay you. You can add multiple options.
+                    </p>
                   </div>
                 </div>
 
@@ -989,7 +1198,7 @@ const AddListing = () => {
                           )}
                           {formData.fee && (
                             <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                              <Clock className="h-3 w-3 mr-1" />${formData.fee}
+                              <Clock className="h-3 w-3 mr-1" />৳{formData.fee}
                             </span>
                           )}
                         </div>

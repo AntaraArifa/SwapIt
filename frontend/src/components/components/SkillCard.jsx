@@ -133,7 +133,7 @@ const SkillCard = ({ skill, onMessageClick }) => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <span className="text-2xl font-bold text-gray-900">
-              ${skill.fee}
+              ৳{skill.fee}
             </span>
             <span className="text-sm text-gray-500">/session</span>
           </div>
