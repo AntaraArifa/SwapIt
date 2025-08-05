@@ -7,7 +7,7 @@ const router = express.Router();
 // register a course
 router.post('/register', isAuthenticated, registeredCoursesController.registerCourse);
 
-// check if a student is registered for a course (changed to POST)
-router.post('/check', isAuthenticated, registeredCoursesController.isStudentRegisteredForCourse);
+// check course registration status for a student
+router.post('/check', isAuthenticated, registeredCoursesController.checkCourseStatus);
 
 export default router;

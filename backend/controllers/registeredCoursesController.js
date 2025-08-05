@@ -84,8 +84,8 @@ export const getRegisteredCoursesByStudentId = async (req, res) => {
     }
 };
 
-// Check if a student is registered for a specific course
-export const isStudentRegisteredForCourse = async (req, res) => {
+// Check course registration status for a student
+export const checkCourseStatus = async (req, res) => {
     try {
         const { studentId, courseId } = req.body;
         if (!studentId || !courseId) {
@@ -94,12 +94,100 @@ export const isStudentRegisteredForCourse = async (req, res) => {
         // Check if the student is registered for the course
         const registration = await RegisteredCourse.findOne({ studentId, courseId });
         if (!registration) {
-            return res.status(200).json({ message: "Student is not registered for this course", success: false, registered: false });
+            return res.status(200).json({ 
+                message: "Student is not registered for this course", 
+                success: true, 
+                status: "notRegistered" 
+            });
         }
-        return res.status(200).json({ message: "Student is registered for this course", success: true, data: registration });
+        return res.status(200).json({ 
+            message: "Course registration status retrieved successfully", 
+            success: true, 
+            status: registration.status || registration.courseStatus,
+            data: registration 
+        });
     }
     catch (error) {
-        console.error("Error checking course registration:", error);
+        console.error("Error checking course registration status:", error);
         return res.status(500).json({ message: "Internal server error", success: false });
+    }
+};
+
+// Controller to update course registration status
+export const updateCourseRegistrationStatus = async (req, res) => {
+    try{
+        const { registrationId, teacherId } = req.body;
+        
+        // Validate required fields
+        if (!registrationId || !teacherId) {
+            return res.status(400).json({ 
+                message: "Registration ID and teacher ID are required", 
+                success: false 
+            });
+        }
+
+        // Find the registration with populated course details
+        const registration = await RegisteredCourse.findById(registrationId)
+            .populate({
+                path: 'courseId',
+                select: 'teacherID title',
+                populate: {
+                    path: 'teacherID',
+                    select: '_id fullname'
+                }
+            });
+
+        if (!registration) {
+            return res.status(404).json({ 
+                message: "Registration not found", 
+                success: false 
+            });
+        }
+
+        // Check if the teacher is authorized (only the course instructor can update status)
+        if (registration.courseId.teacherID._id.toString() !== teacherId.toString()) {
+            return res.status(403).json({ 
+                message: "Unauthorized. Only the course instructor can update registration status", 
+                success: false 
+            });
+        }
+
+        // Check if the current status is "pending"
+        if (registration.status !== "pending") {
+            return res.status(400).json({ 
+                message: `Cannot update status. Current status is "${registration.status}". Only pending registrations can be approved.`, 
+                success: false 
+            });
+        }
+
+        // Update the registration status from "pending" to "registered"
+        registration.status = "registered";
+        registration.statusUpdatedAt = new Date();
+        await registration.save();
+
+        // Populate the updated registration with full details
+        const updatedRegistration = await RegisteredCourse.findById(registrationId)
+            .populate('courseId', 'title description fee duration proficiency')
+            .populate('studentId', 'fullname email')
+            .populate({
+                path: 'courseId',
+                populate: {
+                    path: 'teacherID',
+                    select: 'fullname email'
+                }
+            });
+
+        return res.status(200).json({ 
+            message: "Registration approved successfully. Status updated to registered.", 
+            success: true, 
+            data: updatedRegistration 
+        });
+
+    } catch (error) {
+        console.error("Error updating registration status:", error);
+        return res.status(500).json({ 
+            message: "Internal server error", 
+            success: false 
+        });
     }
 };
