@@ -164,7 +164,7 @@ const LearnerSessions = () => {
                 <strong>🎯 Skill:</strong> {session.skillName || session.skillListingID?.title || "N/A"}
               </p>
               <p>
-                <strong>💵 Price:</strong> ${session.price || session.skillListingID?.fee || "N/A"}
+                <strong>💵 Price:</strong> ৳{session.price || session.skillListingID?.fee || "N/A"}
               </p>
               <p>
                 <strong>🕒 Time Slot:</strong>{" "}

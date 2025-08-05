@@ -58,6 +58,11 @@ const API_CONFIG = {
     REVIEW: {
       CREATE: "/review/create",
     },
+    // Courses (Registration)
+    COURSES: {
+      CHECK: "/courses/check",
+      REGISTER: "/courses/register",
+    },
   },
 }
 

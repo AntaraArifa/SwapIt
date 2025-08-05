@@ -29,6 +29,7 @@ import RatingReviewPage from "./components/pages/Rating/RatingReviewPage"
 import RatingsReviews from "./components/pages/General/RatingsReviews"
 import UserRatingsReviews from "./components/pages/General/UserRatingsReviews"
 import TeacherReviews from "./components/pages/General/TeacherReviews"
+import RegisterCourse from "./components/pages/Skills/RegisterCourse"
 
 const Skills = () => (
   <div className="p-6 text-center">
@@ -75,6 +76,7 @@ const App = () => {
         <Route path="/edit-listing/:id" element={<EditListings />} />
         <Route path="/meeting/:roomCode" element={<MeetingPage />} />
         <Route path="/rating/:skillListingID" element={<RatingReviewPage />} />
+        <Route path="/skills/register/:id" element={<RegisterCourse />} />
         <Route path="*" element={<div className="text-center p-6">404 - Page Not Found</div>} />
       </Routes>
       <Footer />

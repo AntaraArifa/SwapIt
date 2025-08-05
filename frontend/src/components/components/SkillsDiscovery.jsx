@@ -16,7 +16,7 @@ const SkillsDiscovery = () => {
   const [filters, setFilters] = useState({
     location: "",
     minRating: 0,
-    maxPrice: 1000,
+    maxPrice: 100000, // Will be updated based on API data
     proficiency: "any",
   });
   const [allSkills, setAllSkills] = useState([]);
@@ -86,6 +86,17 @@ const SkillsDiscovery = () => {
         if (skillsData.success) {
           setAllSkills(skillsData.listings);
           setFilteredSkills(skillsData.listings);
+          
+          // Calculate the maximum price from the skills data
+          if (skillsData.listings && skillsData.listings.length > 0) {
+            const maxPriceFromData = Math.max(...skillsData.listings.map(skill => skill.fee || 0));
+            // Add some buffer to the max price (round up to nearest thousand)
+            const bufferedMaxPrice = Math.ceil(maxPriceFromData / 1000) * 1000;
+            setFilters(prevFilters => ({
+              ...prevFilters,
+              maxPrice: Math.max(bufferedMaxPrice, 1000) // Ensure minimum of 1000
+            }));
+          }
         } else {
           throw new Error(skillsData.message || "Failed to fetch skills");
         }

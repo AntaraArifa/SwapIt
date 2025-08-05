@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import { Star, BookOpen, MessageCircle, Calendar, Award, Edit } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
+import CourseStudents from "./CourseStudents";
 
 const SkillDetails = () => {
   const { id } = useParams();
@@ -15,6 +16,11 @@ const SkillDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTab, setSelectedTab] = useState("overview");
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState(null);
+  const [registrationStatus, setRegistrationStatus] = useState("notRegistered");
+  const [checkingRegistration, setCheckingRegistration] = useState(false);
 
   // Fetch skill details from API
   useEffect(() => {
@@ -94,6 +100,177 @@ const SkillDetails = () => {
       setError("No skill ID provided");
     }
   }, [id]);
+
+  // Fetch reviews for the listing
+  const fetchReviews = async () => {
+    if (!id) return;
+    
+    try {
+      setReviewsLoading(true);
+      setReviewsError(null);
+
+      // Get token from cookies
+      const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+        return null;
+      };
+
+      const token = getCookie("token");
+
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      // Add authorization header if token exists
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${buildApiUrl('')}/reviews/listing/${id}`, {
+        method: "GET",
+        headers: headers,
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setReviews(data.reviews || []);
+        } else {
+          setReviewsError(data.message || "Failed to fetch reviews");
+        }
+      } else {
+        setReviewsError("Failed to fetch reviews");
+      }
+    } catch (err) {
+      setReviewsError("Error fetching reviews");
+      console.error("Error fetching reviews:", err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  // Fetch reviews when component loads
+  useEffect(() => {
+    if (id && reviews.length === 0 && !reviewsLoading) {
+      fetchReviews();
+    }
+  }, [id]);
+
+  // Check registration status for the course
+  const checkRegistration = async () => {
+    if (!user || !id) return;
+    
+    try {
+      setCheckingRegistration(true);
+      
+      // Get token from cookies
+      const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+        return null;
+      };
+
+      const token = getCookie("token");
+
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.COURSES.CHECK), {
+        method: "POST",
+        headers: headers,
+        credentials: "include",
+        body: JSON.stringify({
+          studentId: user._id,
+          courseId: id
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Set the registration status from API response
+        setRegistrationStatus(data.status || "notRegistered");
+      } else {
+        // If API call fails or returns error, assume not registered
+        setRegistrationStatus("notRegistered");
+      }
+    } catch (err) {
+      console.error("Error checking registration:", err);
+      setRegistrationStatus("notRegistered");
+    } finally {
+      setCheckingRegistration(false);
+    }
+  };
+
+  // Check registration when user and skill data are loaded
+  useEffect(() => {
+    if (user && skill && !checkingRegistration) {
+      checkRegistration();
+    }
+  }, [user, skill]);
+
+  // Handle course registration
+  const handleRegister = async () => {
+    if (!user || !skill) return;
+
+    try {
+      // Get token from cookies
+      const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+        return null;
+      };
+
+      const token = getCookie("token");
+
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      // For demo purposes, using placeholder data
+      // In a real app, you'd collect this from a form
+      const registrationData = {
+        studentId: user._id,
+        courseId: skill._id,
+        contactNo: user.phone || "+8801712345678", // Use user's phone or placeholder
+        paymentMethod: "bKash", // This should come from a payment form
+        transactionID: "TXN" + Date.now() // Generate transaction ID
+      };
+
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.COURSES.REGISTER), {
+        method: "POST",
+        headers: headers,
+        credentials: "include",
+        body: JSON.stringify(registrationData)
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        alert("Successfully registered for the course!");
+        setRegistrationStatus("pending"); // Update status to pending after registration
+      } else {
+        alert(data.message || "Failed to register for the course");
+      }
+    } catch (err) {
+      console.error("Error registering for course:", err);
+      alert("An error occurred while registering");
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -177,15 +354,21 @@ const SkillDetails = () => {
       return timeStr;
     }
     
-    // Parse 24-hour format (e.g., "09:30", "9:30", "0930")
-    let hours, minutes;
+    // Parse 24-hour format (e.g., "09:30", "9:30", "0930", "10:00", "14:00")
+    let hours, minutes = "00";
     
     if (timeStr.includes(':')) {
-      [hours, minutes] = timeStr.split(':');
+      const parts = timeStr.split(':');
+      hours = parts[0];
+      minutes = parts[1] || "00";
     } else if (timeStr.length === 4) {
       // Handle format like "0930"
       hours = timeStr.substring(0, 2);
       minutes = timeStr.substring(2, 4);
+    } else if (timeStr.length === 1 || timeStr.length === 2) {
+      // Handle format like "9" or "14"
+      hours = timeStr;
+      minutes = "00";
     } else {
       return timeStr; // Return original if format is unrecognized
     }
@@ -203,6 +386,37 @@ const SkillDetails = () => {
     const displayMinutes = minutes.toString().padStart(2, '0');
     
     return `${displayHours}:${displayMinutes} ${period}`;
+  };
+
+  // Helper function to render star rating
+  const renderStarRating = (rating) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <Star
+          key={i}
+          className={`h-4 w-4 ${
+            i <= rating 
+              ? 'fill-yellow-400 text-yellow-400' 
+              : 'text-gray-300'
+          }`}
+        />
+      );
+    }
+    return stars;
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return 'Date not available';
+    }
   };
 
   return (
@@ -273,7 +487,7 @@ const SkillDetails = () => {
                           {skill.avgRating}
                         </span>
                         <span className="text-white/80 drop-shadow-lg">
-                          (0 reviews)
+                          ({reviews.length || 0} review{reviews.length !== 1 ? 's' : ''})
                         </span>
                       </>
                     ) : (
@@ -314,11 +528,13 @@ const SkillDetails = () => {
             <div className="p-6">
               {selectedTab === "overview" && (
                 <div>
-                  {/* <h2 className="text-xl font-semibold mb-4 text-gray-900">Course Description</h2> */}
-                  <MarkdownRenderer
-                    content={skill.description}
-                    className="mb-6 text-gray-600 leading-relaxed"
-                  />
+                  {/* Course Description */}
+                  <div className="mb-8">
+                    <MarkdownRenderer
+                      content={skill.description}
+                      className="text-gray-600 leading-relaxed"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -362,16 +578,150 @@ const SkillDetails = () => {
 
               {selectedTab === "reviews" && (
                 <div>
-                  <h3 className="text-xl font-semibold mb-4 text-gray-900">
-                    Student Reviews
-                  </h3>
-                  <div className="text-center py-8 text-gray-500">
-                    <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No reviews yet. Be the first to review this skill!</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      Student Reviews
+                    </h3>
+                    {reviews.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center">
+                          {renderStarRating(Math.round(skill.avgRating || 0))}
+                        </div>
+                        <span className="text-lg font-semibold text-gray-900">
+                          {skill.avgRating || 0}
+                        </span>
+                        <span className="text-gray-500">
+                          ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
+                        </span>
+                      </div>
+                    )}
                   </div>
+
+                  {reviewsLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading reviews...</p>
+                    </div>
+                  ) : reviewsError ? (
+                    <div className="text-center py-8 text-red-500">
+                      <p>{reviewsError}</p>
+                      <button
+                        onClick={fetchReviews}
+                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  ) : reviews.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No reviews yet. Be the first to review this skill!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {reviews.map((review) => (
+                        <div
+                          key={review._id}
+                          className="border-b border-gray-200 pb-6 last:border-b-0"
+                        >
+                          <div className="flex items-start gap-4">
+                            {/* Reviewer Avatar */}
+                            <div className="flex-shrink-0">
+                              {review.learnerID?.profile?.profilePhoto ? (
+                                <img
+                                  src={review.learnerID.profile.profilePhoto}
+                                  alt={review.learnerID.fullname}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-lg font-semibold text-gray-600">
+                                  {review.learnerID?.fullname
+                                    ? review.learnerID.fullname
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                    : "??"}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Review Content */}
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <p className="font-semibold text-gray-900">
+                                    {review.learnerID?.fullname || "Anonymous"}
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    {formatDate(review.createdAt)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {renderStarRating(review.rating)}
+                                  <span className="ml-2 text-sm font-medium text-gray-700">
+                                    {review.rating}/5
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Review Text (if available) */}
+                              {review.reviewText && (
+                                <p className="text-gray-700 leading-relaxed">
+                                  {review.reviewText}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Summary Statistics */}
+                      {reviews.length >= 5 && (
+                        <div className="mt-8 bg-gray-50 rounded-lg p-6">
+                          <h4 className="font-semibold text-gray-900 mb-4">
+                            Rating Summary
+                          </h4>
+                          <div className="space-y-2">
+                            {[5, 4, 3, 2, 1].map((rating) => {
+                              const count = reviews.filter(r => r.rating === rating).length;
+                              const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+                              
+                              return (
+                                <div key={rating} className="flex items-center gap-2">
+                                  <span className="text-sm font-medium w-8">
+                                    {rating}★
+                                  </span>
+                                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className="bg-yellow-400 h-2 rounded-full"
+                                      style={{ width: `${percentage}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-sm text-gray-600 w-12 text-right">
+                                    {count}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+          </div>
+          <div className="mt-8">
+            {/* Course Students Section - Only visible to course teacher */}
+                  {user && skill.teacherID._id === user._id && (
+                    <div className="border-t border-gray-200 pt-8">
+                      <h3 className="text-xl font-semibold mb-6 text-gray-900">
+                        Registered Students
+                      </h3>
+                      <CourseStudents courseId={skill._id} />
+                    </div>
+                  )}
           </div>
         </div>
 
@@ -383,7 +733,6 @@ const SkillDetails = () => {
               <span className="text-3xl font-bold text-gray-900">
                 Taka {skill.fee}
               </span>
-              <span className="text-lg text-gray-600">/session</span>
             </div>
             <div className="space-y-3">
               {/* Check if current user is the listing owner */}
@@ -396,17 +745,62 @@ const SkillDetails = () => {
                   Edit Listing
                 </button>
               ) : (
-                <button
-                  onClick={() =>
-                    navigate(`/book-session/${skill._id}`, {
-                      state: { teacherID: skill.teacherID._id }, // pass teacherID here
-                    })
-                  }
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Book a Session
-                </button>
+                <>
+                  {/* Show different buttons based on registration status */}
+                  {checkingRegistration ? (
+                    <button
+                      disabled
+                      className="w-full bg-gray-400 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2"
+                    >
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Checking...
+                    </button>
+                  ) : registrationStatus === "notRegistered" ? (
+                    <button
+                      onClick={() => navigate(`/skills/register/${skill._id}`)}
+                      className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Register for Course
+                    </button>
+                  ) : registrationStatus === "pending" ? (
+                    <button
+                      disabled
+                      className="w-full bg-yellow-400 text-yellow-900 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Pending Approval
+                    </button>
+                  ) : registrationStatus === "registered" ? (
+                    <button
+                      onClick={() =>
+                        navigate(`/book-session/${skill._id}`, {
+                          state: { teacherID: skill.teacherID._id },
+                        })
+                      }
+                      className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Book a Session
+                    </button>
+                  ) : registrationStatus === "completed" ? (
+                    <button
+                      disabled
+                      className="w-full bg-green-400 text-green-900 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Course Completed
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => navigate(`/skills/register/${skill._id}`)}
+                      className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Register for Course
+                    </button>
+                  )}
+                </>
               )}
 
               <button className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
@@ -446,8 +840,10 @@ const SkillDetails = () => {
                 </div>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Session Duration</span>
-                <span className="font-medium text-gray-900">1 hour</span>
+                <span className="text-gray-600">Course Duration</span>
+                <span className="font-medium text-gray-900">
+                  {skill.duration || "Not specified"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Format</span>
@@ -467,6 +863,23 @@ const SkillDetails = () => {
                     ))
                   ) : (
                     <span className="font-medium text-gray-900">No slots available</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Payment Methods</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {skill.paymentMethods && skill.paymentMethods.length > 0 ? (
+                    skill.paymentMethods.map((method, index) => (
+                      <span
+                        key={index}
+                        className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium"
+                      >
+                        {method.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="font-medium text-gray-900">Not specified</span>
                   )}
                 </div>
               </div>

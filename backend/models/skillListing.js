@@ -16,10 +16,6 @@ const skillListingSchema = new mongoose.Schema({
         ref: 'Skill', // reference to the Skill model
         required: true
     },
-    title: { 
-        type: String, 
-        required: true
-    },
     description: { 
         type: String, 
         required: true 
@@ -29,6 +25,20 @@ const skillListingSchema = new mongoose.Schema({
         required: true, 
         min: 0 // fee cannot be negative
     },
+    duration: {
+        type: String,
+        required: true
+    },
+    paymentMethods: [{
+        name: {
+            type: String,
+            required: true
+        },
+        accountNumber: {
+            type: String,
+            required: true
+        }
+    }],
     proficiency:{
         type: String, 
         enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],

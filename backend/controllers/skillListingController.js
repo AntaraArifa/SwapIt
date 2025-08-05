@@ -5,12 +5,24 @@ import { User } from "../models/user.model.js";
 // Create a new skill listing
 export const createSkillListing = async (req, res) => {
     try {
-        const { title, description, fee, proficiency, skillID, listingImgURL, availableSlots } = req.body;
+        const { title, description, fee, proficiency, skillID, listingImgURL, availableSlots, paymentMethods, duration } = req.body;
         const teacherID = req.user.userId; // Get teacherID from authenticated user
 
         // Validate fee
         if (fee < 0) {
             return res.status(400).json({ message: "Fee cannot be negative", success: false });
+        }
+
+        // Validate payment methods
+        if (!paymentMethods || !Array.isArray(paymentMethods) || paymentMethods.length === 0) {
+            return res.status(400).json({ message: "At least one payment method is required", success: false });
+        }
+
+        // Validate each payment method
+        for (const method of paymentMethods) {
+            if (!method.name || !method.accountNumber) {
+                return res.status(400).json({ message: "Each payment method must have a name and account number", success: false });
+            }
         }
 
         // Check if skill exists
@@ -28,11 +40,13 @@ export const createSkillListing = async (req, res) => {
             title,
             description,
             fee,
+            duration,
             proficiency,
             skillID,
             teacherID, 
             listingImgURL,
-            availableSlots: Array.isArray(availableSlots) ? availableSlots : []
+            availableSlots: Array.isArray(availableSlots) ? availableSlots : [],
+            paymentMethods
         });
 
         await newListing.save();
@@ -52,7 +66,7 @@ export const createSkillListing = async (req, res) => {
 // Update an existing skill listing
 export const updateSkillListing = async (req, res) => {
     try {
-        const { title, description, fee, proficiency, skillID, listingImgURL, availableSlots } = req.body;
+        const { title, description, fee, proficiency, skillID, listingImgURL, availableSlots, paymentMethods, duration } = req.body;
         const listingID = req.params.id;
         const teacherID = req.user.userId;
 
@@ -61,6 +75,19 @@ export const updateSkillListing = async (req, res) => {
             return res.status(400).json({ message: "Fee cannot be negative", success: false });
         }
 
+        // Validate payment methods if provided
+        if (paymentMethods !== undefined) {
+            if (!Array.isArray(paymentMethods) || paymentMethods.length === 0) {
+                return res.status(400).json({ message: "At least one payment method is required", success: false });
+            }
+
+            // Validate each payment method
+            for (const method of paymentMethods) {
+                if (!method.name || !method.accountNumber) {
+                    return res.status(400).json({ message: "Each payment method must have a name and account number", success: false });
+                }
+            }
+        }
 
         const skill = await Skill.findById(skillID);
         if (!skill) {
@@ -85,6 +112,12 @@ export const updateSkillListing = async (req, res) => {
         listing.proficiency = proficiency;
         listing.skillID = skillID;
         listing.listingImgURL = listingImgURL;
+        if (duration !== undefined) {
+            listing.duration = duration;
+        }
+        if (paymentMethods !== undefined) {
+            listing.paymentMethods = paymentMethods;
+        }
         if (Array.isArray(availableSlots)) {
             listing.availableSlots = availableSlots;
         }
@@ -141,7 +174,7 @@ export const getAllSkillListings = async (req, res) => {
     }
 };
 
-// Get skill listings by lsiting ID
+// Get skill listings by listing ID
 export const getSkillListingById = async (req, res) => {
     try {
         const listingID = req.params.id;
