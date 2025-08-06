@@ -1,5 +1,7 @@
 import Session from "../models/session.js";
 import SkillListing from "../models/skillListing.js";
+import Notification from "../models/notificationModel.js"
+
 
 // Learner creates a session request
 export const createSession = async (req, res) => {
@@ -11,21 +13,22 @@ export const createSession = async (req, res) => {
     if (!skillListing) {
       return res.status(404).json({ message: "Skill listing not found", success: false });
     }
-    // Only match the time part (HH:mm) with availableSlots
+
     if (!slotTime || !skillListing.availableSlots.includes(slotTime)) {
       return res.status(400).json({ message: "Selected time slot is not available", success: false });
     }
-    // Combine date and time into a Date object
+
     if (!slotDate) {
       return res.status(400).json({ message: "Date is required", success: false });
     }
+
     const scheduledTime = new Date(`${slotDate}T${slotTime}`);
 
-    // Check for existing session for this skillListing, date, and time
     const existingSession = await Session.findOne({
       skillListingID,
-      scheduledTime: scheduledTime,
+      scheduledTime,
     });
+
     if (existingSession) {
       return res.status(400).json({ message: "This slot is already booked for the selected date.", success: false });
     }
@@ -42,12 +45,26 @@ export const createSession = async (req, res) => {
 
     await newSession.save();
 
-    res.status(201).json({ message: "Session request sent", success: true, session: newSession });
+    // ✅ Create notification for the teacher
+    const notification = new Notification({
+      recipient: teacherID,
+      sender: learnerID,
+      message: `A session has been booked for "${skillListing.title}" on ${slotDate} at ${slotTime}.`,
+    });
+
+    await notification.save();
+
+    res.status(201).json({
+      message: "Session request sent",
+      success: true,
+      session: newSession,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
+
 
 // Get all sessions of a user (learner or teacher), with optional filtering by status and date range
 export const getUserSessions = async (req, res) => {
@@ -268,4 +285,3 @@ export const getTeacherSessions = async (req, res) => {
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
-

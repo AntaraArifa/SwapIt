@@ -85,7 +85,7 @@ const Navbar = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    const unread = notifications.filter((n) => !n.read).length;
+    const unread = notifications.filter((n) => !n.isRead).length;
     setUnreadCount(unread);
   }, [notifications]);
 
@@ -149,8 +149,10 @@ const Navbar = () => {
                       )
                       .then(() => {
                         setUnreadCount(0);
-                        setNotifications((prev) =>
-                          prev.map((n) => ({ ...n, read: true }))
+                        dispatch(
+                          setNotifications(
+                            notifications.map((n) => ({ ...n, isRead: true }))
+                          )
                         );
                       })
                       .catch((err) =>
@@ -187,27 +189,40 @@ const Navbar = () => {
                         No notifications
                       </p>
                     ) : (
-                      <ul className="divide-y">
-                        {notifications.map((notif) => (
-                          <li key={notif._id} className="p-4 space-y-1">
-                            <p className="text-sm text-gray-800 font-medium">
-                              {notif.sender?.fullname || "Someone"}:{" "}
-                              {notif.message}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(notif.createdAt).toLocaleString()}
-                            </p>
-                            <a
-                              href={notif.meetingLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-indigo-600 text-sm font-semibold hover:underline"
-                            >
-                              Join Meeting
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
+                      <>
+                        <ul className="divide-y">
+                          {notifications.slice(0, 5).map((notif) => (
+                            <li key={notif._id} className="p-4 space-y-1">
+                              <p className="text-sm text-gray-800 font-medium">
+                                {notif.sender?.fullname || "Someone"}:{" "}
+                                {notif.message}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(notif.createdAt).toLocaleString()}
+                              </p>
+                              {notif.meetingLink && (
+                                <a
+                                  href={notif.meetingLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 text-sm font-semibold hover:underline"
+                                >
+                                  Join Meeting
+                                </a>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="text-right p-2 border-t">
+                          <Link
+                            to="/notifications"
+                            className="text-sm text-indigo-600 hover:underline font-medium"
+                            onClick={() => setShowNotifications(false)}
+                          >
+                            See All
+                          </Link>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
