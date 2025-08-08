@@ -12,7 +12,7 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import ratingRoutes from "./routes/ratingRoutes.js"; // Import rating routes
 import reviewRoutes from "./routes/reviewRoutes.js"; // Import review routes
 import registeredCoursesRoutes from "./routes/registeredCoursesRoutes.js"; // Import registered courses routes
-
+import chatRoutes from "./routes/chatRoutes.js"; // Import chat routes
 
 // Initialize environment variables
 dotenv.config();
@@ -44,6 +44,7 @@ app.use('/api/v1/notification',notificationRoutes);
 app.use('/api/v1/ratings', ratingRoutes); // Mount rating routes
 app.use('/api/v1/reviews', reviewRoutes); // Mount review routes
 app.use('/api/v1/courses', registeredCoursesRoutes); // Mount registered courses routes
+app.use('/api/v1/chat', chatRoutes); // Mount chat routes
 
 
 

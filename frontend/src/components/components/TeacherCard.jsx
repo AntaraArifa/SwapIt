@@ -76,7 +76,7 @@ const TeacherCard = ({ teacher }) => {
           </Link>
           <button className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 flex items-center justify-center gap-1">
             <MessageCircle className="h-4 w-4" />
-            Contact
+            Message
           </button>
         </div>
 

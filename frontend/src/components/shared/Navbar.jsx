@@ -66,7 +66,7 @@ const Navbar = () => {
           }
         );
 
-        console.log("Fetched notifications:", response.data);
+       
 
         if (Array.isArray(response.data.notifications)) {
           dispatch(setNotifications(response.data.notifications));

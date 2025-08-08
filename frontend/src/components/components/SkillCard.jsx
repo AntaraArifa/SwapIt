@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom";
 import { Star, MessageCircle } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import { useState } from "react";
+import ChatBox from "../pages/Chat/ChatBox";
+
 
 const SkillCard = ({ skill, onMessageClick }) => {
+  const [chatVisible, setChatVisible] = useState(false);
+  const [selectedInstructor, setSelectedInstructor] = useState(null);
+
   const getProficiencyColor = (proficiency) => {
     switch (proficiency.toLowerCase()) {
       case "beginner":
@@ -15,7 +21,7 @@ const SkillCard = ({ skill, onMessageClick }) => {
         return "bg-gray-100 text-gray-800";
     }
   };
-
+  
   const truncateToWords = (text, wordLimit = 50) => {
     if (!text) return "";
 
@@ -152,10 +158,15 @@ const SkillCard = ({ skill, onMessageClick }) => {
             className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 flex items-center justify-center gap-1"
           >
             <MessageCircle className="h-4 w-4" />
-            Message
+            Contact
           </button>
         </div>
       </div>
+      <ChatBox
+        visible={chatVisible}
+        onClose={() => setChatVisible(false)}
+        receiver={selectedInstructor}
+      />
     </div>
   );
 };

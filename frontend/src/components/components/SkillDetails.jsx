@@ -3,15 +3,24 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Star, BookOpen, MessageCircle, Calendar, Award, Edit } from "lucide-react";
+import {
+  Star,
+  BookOpen,
+  MessageCircle,
+  Calendar,
+  Award,
+  Edit,
+} from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
 import CourseStudents from "./CourseStudents";
+import axios from "axios";
+import ChatBox from "../pages/Chat/ChatBox";
 
 const SkillDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const user = useSelector(state => state.auth.user);
+  const user = useSelector((state) => state.auth.user);
   const [skill, setSkill] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,6 +30,15 @@ const SkillDetails = () => {
   const [reviewsError, setReviewsError] = useState(null);
   const [registrationStatus, setRegistrationStatus] = useState("notRegistered");
   const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [chatVisible, setChatVisible] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+    return null;
+  };
 
   // Fetch skill details from API
   useEffect(() => {
@@ -100,11 +118,30 @@ const SkillDetails = () => {
       setError("No skill ID provided");
     }
   }, [id]);
+  const handleMessageClick = async (receiver) => {
+    try {
+      const token = getCookie("token");
+      const res = await axios.post(
+        "http://localhost:3000/api/v1/chat/chat",
+        { userId: receiver._id },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        }
+      );
+
+      const chatId = res.data._id;
+      setSelectedStudent({ ...receiver, chatId });
+      setChatVisible(true);
+    } catch (err) {
+      console.error("Error opening chat", err);
+    }
+  };
 
   // Fetch reviews for the listing
   const fetchReviews = async () => {
     if (!id) return;
-    
+
     try {
       setReviewsLoading(true);
       setReviewsError(null);
@@ -128,7 +165,7 @@ const SkillDetails = () => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${buildApiUrl('')}/reviews/listing/${id}`, {
+      const response = await fetch(`${buildApiUrl("")}/reviews/listing/${id}`, {
         method: "GET",
         headers: headers,
         credentials: "include",
@@ -162,10 +199,10 @@ const SkillDetails = () => {
   // Check registration status for the course
   const checkRegistration = async () => {
     if (!user || !id) return;
-    
+
     try {
       setCheckingRegistration(true);
-      
+
       // Get token from cookies
       const getCookie = (name) => {
         const value = `; ${document.cookie}`;
@@ -190,12 +227,12 @@ const SkillDetails = () => {
         credentials: "include",
         body: JSON.stringify({
           studentId: user._id,
-          courseId: id
-        })
+          courseId: id,
+        }),
       });
 
       const data = await response.json();
-      
+
       if (response.ok && data.success) {
         // Set the registration status from API response
         setRegistrationStatus(data.status || "notRegistered");
@@ -248,18 +285,21 @@ const SkillDetails = () => {
         courseId: skill._id,
         contactNo: user.phone || "+8801712345678", // Use user's phone or placeholder
         paymentMethod: "bKash", // This should come from a payment form
-        transactionID: "TXN" + Date.now() // Generate transaction ID
+        transactionID: "TXN" + Date.now(), // Generate transaction ID
       };
 
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.COURSES.REGISTER), {
-        method: "POST",
-        headers: headers,
-        credentials: "include",
-        body: JSON.stringify(registrationData)
-      });
+      const response = await fetch(
+        buildApiUrl(API_ENDPOINTS.COURSES.REGISTER),
+        {
+          method: "POST",
+          headers: headers,
+          credentials: "include",
+          body: JSON.stringify(registrationData),
+        }
+      );
 
       const data = await response.json();
-      
+
       if (response.ok && data.success) {
         alert("Successfully registered for the course!");
         setRegistrationStatus("pending"); // Update status to pending after registration
@@ -348,17 +388,21 @@ const SkillDetails = () => {
   const convertTo12Hour = (time24) => {
     // Handle different time formats
     const timeStr = time24.toString().trim();
-    
+
     // If already in 12-hour format, return as is
-    if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+    if (
+      timeStr.toLowerCase().includes("am") ||
+      timeStr.toLowerCase().includes("pm")
+    ) {
       return timeStr;
     }
-    
+
     // Parse 24-hour format (e.g., "09:30", "9:30", "0930", "10:00", "14:00")
-    let hours, minutes = "00";
-    
-    if (timeStr.includes(':')) {
-      const parts = timeStr.split(':');
+    let hours,
+      minutes = "00";
+
+    if (timeStr.includes(":")) {
+      const parts = timeStr.split(":");
       hours = parts[0];
       minutes = parts[1] || "00";
     } else if (timeStr.length === 4) {
@@ -372,19 +416,26 @@ const SkillDetails = () => {
     } else {
       return timeStr; // Return original if format is unrecognized
     }
-    
+
     hours = parseInt(hours);
     minutes = parseInt(minutes);
-    
+
     // Validate hours and minutes
-    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    if (
+      isNaN(hours) ||
+      isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
       return timeStr; // Return original if invalid
     }
-    
-    const period = hours >= 12 ? 'PM' : 'AM';
+
+    const period = hours >= 12 ? "PM" : "AM";
     const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    const displayMinutes = minutes.toString().padStart(2, '0');
-    
+    const displayMinutes = minutes.toString().padStart(2, "0");
+
     return `${displayHours}:${displayMinutes} ${period}`;
   };
 
@@ -396,9 +447,7 @@ const SkillDetails = () => {
         <Star
           key={i}
           className={`h-4 w-4 ${
-            i <= rating 
-              ? 'fill-yellow-400 text-yellow-400' 
-              : 'text-gray-300'
+            i <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
           }`}
         />
       );
@@ -409,16 +458,19 @@ const SkillDetails = () => {
   // Helper function to format date
   const formatDate = (dateString) => {
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
     } catch {
-      return 'Date not available';
+      return "Date not available";
     }
   };
-
+  const handleCloseChat = () => {
+    setChatVisible(false);
+    setSelectedStudent(null);
+  };
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -487,7 +539,8 @@ const SkillDetails = () => {
                           {skill.avgRating}
                         </span>
                         <span className="text-white/80 drop-shadow-lg">
-                          ({reviews.length || 0} review{reviews.length !== 1 ? 's' : ''})
+                          ({reviews.length || 0} review
+                          {reviews.length !== 1 ? "s" : ""})
                         </span>
                       </>
                     ) : (
@@ -591,7 +644,8 @@ const SkillDetails = () => {
                           {skill.avgRating || 0}
                         </span>
                         <span className="text-gray-500">
-                          ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
+                          ({reviews.length} review
+                          {reviews.length !== 1 ? "s" : ""})
                         </span>
                       </div>
                     )}
@@ -683,11 +737,19 @@ const SkillDetails = () => {
                           </h4>
                           <div className="space-y-2">
                             {[5, 4, 3, 2, 1].map((rating) => {
-                              const count = reviews.filter(r => r.rating === rating).length;
-                              const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
-                              
+                              const count = reviews.filter(
+                                (r) => r.rating === rating
+                              ).length;
+                              const percentage =
+                                reviews.length > 0
+                                  ? (count / reviews.length) * 100
+                                  : 0;
+
                               return (
-                                <div key={rating} className="flex items-center gap-2">
+                                <div
+                                  key={rating}
+                                  className="flex items-center gap-2"
+                                >
                                   <span className="text-sm font-medium w-8">
                                     {rating}★
                                   </span>
@@ -714,16 +776,24 @@ const SkillDetails = () => {
           </div>
           <div className="mt-8">
             {/* Course Students Section - Only visible to course teacher */}
-                  {user && skill.teacherID._id === user._id && (
-                    <div className="border-t border-gray-200 pt-8">
-                      <h3 className="text-xl font-semibold mb-6 text-gray-900">
-                        Registered Students
-                      </h3>
-                      <CourseStudents courseId={skill._id} />
-                    </div>
-                  )}
+            {user && skill.teacherID._id === user._id && (
+              <div className="border-t border-gray-200 pt-8">
+                <h3 className="text-xl font-semibold mb-6 text-gray-900">
+                  Registered Students
+                </h3>
+                <CourseStudents
+                  courseId={skill._id}
+                  onMessageClick={handleMessageClick}
+                />
+              </div>
+            )}
           </div>
         </div>
+        <ChatBox
+          visible={chatVisible}
+          onClose={handleCloseChat}
+          receiver={selectedStudent}
+        />
 
         {/* Sidebar */}
         <div className="space-y-6">
@@ -803,7 +873,7 @@ const SkillDetails = () => {
                 </>
               )}
 
-              <button className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
+              <button  className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Contact Instructor
               </button>
@@ -862,7 +932,9 @@ const SkillDetails = () => {
                       </span>
                     ))
                   ) : (
-                    <span className="font-medium text-gray-900">No slots available</span>
+                    <span className="font-medium text-gray-900">
+                      No slots available
+                    </span>
                   )}
                 </div>
               </div>
@@ -879,7 +951,9 @@ const SkillDetails = () => {
                       </span>
                     ))
                   ) : (
-                    <span className="font-medium text-gray-900">Not specified</span>
+                    <span className="font-medium text-gray-900">
+                      Not specified
+                    </span>
                   )}
                 </div>
               </div>
