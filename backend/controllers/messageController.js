@@ -2,8 +2,7 @@ import expressAsyncHandler from "express-async-handler";
 import Message from "../models/messageModel.js";
 import { User } from "../models/user.model.js";
 import Chat from "../models/chatModel.js";
-
-
+import Notification from "../models/notificationModel.js";
 const allMessages = expressAsyncHandler(async (req, res) => {
   try {
     const messages = await Message.find({ chat: req.params.chatId })
@@ -29,15 +28,16 @@ const sendMessage = expressAsyncHandler(async (req, res) => {
     return res.sendStatus(400);
   }
 
-  var newMessage = {
-    sender: req.user.userId,
-    content: content,
-    chat: chat,
-    readBy: [req.user.userId], 
-  };
-
   try {
-    var message = await Message.create(newMessage);
+    // Create the message
+    let newMessage = {
+      sender: req.user.userId,
+      content,
+      chat,
+      readBy: [req.user.userId],
+    };
+
+    let message = await Message.create(newMessage);
 
     message = await message.populate("sender", "fullname profile.profilePhoto");
     message = await message.populate("chat");
@@ -46,7 +46,26 @@ const sendMessage = expressAsyncHandler(async (req, res) => {
       select: "fullname profile.profilePhoto",
     });
 
-    await Chat.findByIdAndUpdate(req.body.chat, { latestMessage: message });
+    // Update latestMessage in chat
+    await Chat.findByIdAndUpdate(chat, { latestMessage: message });
+
+    // ✅ Find recipient(s) for notification
+    const chatData = message.chat;
+    const recipients = chatData.users.filter(
+      (u) => u._id.toString() !== req.user.userId.toString()
+    );
+
+    // ✅ Create a notification for each recipient
+    for (const recipient of recipients) {
+      const notification = new Notification({
+        recipient: recipient._id,
+        sender: req.user.userId,
+        message: `New message from ${message.sender.fullname}`,
+        type: "chat",
+        relatedChat: chat, // optional for linking
+      });
+      await notification.save();
+    }
 
     res.json(message);
   } catch (error) {
@@ -55,4 +74,5 @@ const sendMessage = expressAsyncHandler(async (req, res) => {
   }
 });
 
-export { allMessages, sendMessage }
+
+export { allMessages, sendMessage };
