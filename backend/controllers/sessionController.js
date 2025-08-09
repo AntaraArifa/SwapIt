@@ -122,13 +122,13 @@ export const updateSessionStatus = async (req, res) => {
 
     let notifMessage = "";
     if (status === "accepted") {
-      notifMessage = `Your session request has been accepted by ${teacherName}`;
+      notifMessage = `Your session request for "${session.skillName}" has been accepted by ${teacherName}`;
     } else if (status === "rejected") {
-      notifMessage = `Your session request has been rejected by ${teacherName}`;
+      notifMessage = `Your session request for "${session.skillName}" has been rejected by ${teacherName}`;
     } else if (status === "cancelled") {
-      notifMessage = `Your session has been cancelled by ${teacherName}`;
+      notifMessage = `Your session for "${session.skillName}" has been cancelled by ${teacherName}`;
     } else if (status === "completed") {
-      notifMessage = `Your session has been marked as completed by ${teacherName}`;
+      notifMessage = `Your session for "${session.skillName}" has been marked as completed by ${teacherName}`;
     }
 
     const notification = new Notification({
