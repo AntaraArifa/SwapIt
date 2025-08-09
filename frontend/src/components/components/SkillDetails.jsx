@@ -17,7 +17,7 @@ import CourseStudents from "./CourseStudents";
 import axios from "axios";
 import ChatBox from "../pages/Chat/ChatBox";
 
-const SkillDetails = () => {
+const SkillDetails = (onMessageClick) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
@@ -32,6 +32,8 @@ const SkillDetails = () => {
   const [checkingRegistration, setCheckingRegistration] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedInstructor, setSelectedInstructor] = useState(null);
+  
 
   const getCookie = (name) => {
     const value = `; ${document.cookie}`;
@@ -873,7 +875,7 @@ const SkillDetails = () => {
                 </>
               )}
 
-              <button  className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
+              <button onClick={() => handleMessageClick(skill.teacherID)} className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Contact Instructor
               </button>
@@ -1024,6 +1026,11 @@ const SkillDetails = () => {
           </div>
         </div>
       </div>
+      <ChatBox
+        visible={chatVisible}
+        onClose={() => setChatVisible(false)}
+        receiver={selectedInstructor}
+      />
     </div>
   );
 };
