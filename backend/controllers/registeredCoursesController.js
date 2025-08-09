@@ -1,7 +1,7 @@
 import RegisteredCourse from "../models/registeredCourses.js";
 import SkillListing from "../models/skillListing.js";
 import { User } from "../models/user.model.js";
-
+import Notification from "../models/notificationModel.js";
 // Controller to register a course
 export const registerCourse = async (req, res) => {
     try{
@@ -39,6 +39,13 @@ export const registerCourse = async (req, res) => {
             status: "pending"
         });
         await registeredCourse.save();
+        await Notification.create({
+            recipient: course.teacherID._id,
+            sender: studentId,
+            type: 'course_registration',
+            message: `${student.fullname} has registered for your course "${course.title}".`,
+            isRead: false
+        });
 
         // Populate the registered course with full details before returning
         const populatedRegistration = await RegisteredCourse.findById(registeredCourse._id)
@@ -164,6 +171,13 @@ export const updateCourseRegistrationStatus = async (req, res) => {
         registration.courseStatus = "registered";
         registration.statusUpdatedAt = new Date();
         await registration.save();
+
+        const notification = new Notification({
+            recipient: registration.studentId._id,
+            sender: teacherId,
+            message: `Your registration for "${registration.courseId.title}" has been approved by ${registration.courseId.teacherID.fullname}.`
+        });
+        await notification.save();
 
         // Populate the updated registration with full details
         const updatedRegistration = await RegisteredCourse.findById(registrationId)

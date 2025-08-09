@@ -7,8 +7,8 @@ export const MeetingPage = () => {
    
     
     const myMeeting=async(element)=>{
-        const appID=1181749484;
-        const serverSecret="f5f96db6eb4bcf7bddd5498ce0cb457b";
+        const appID=1967862515;
+        const serverSecret="d3c4d141dcaa6b0f5b1c2bbfa18b49a5";
         const kitToken=ZegoUIKitPrebuilt.generateKitTokenForTest(appID,serverSecret,roomCode,Date.now().toString(),"Admin");
         const zc=ZegoUIKitPrebuilt.create(kitToken);
         zc.joinRoom({

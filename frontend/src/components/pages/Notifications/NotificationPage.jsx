@@ -29,30 +29,53 @@ const NotificationPage = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">All Notifications</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        All Notifications
+      </h1>
 
       {notifications.length === 0 ? (
-        <p className="text-gray-500 text-center">You don’t have any notifications.</p>
+        <p className="text-gray-500 text-center">
+          You don’t have any notifications.
+        </p>
       ) : (
         <ul className="space-y-4">
           {notifications.map((notif) => (
-            <li key={notif._id} className="p-4 border rounded-lg shadow-sm bg-white">
-              <div className="text-sm text-gray-800 font-medium">
-                {notif.sender?.fullname || "Someone"}: {notif.message}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {new Date(notif.createdAt).toLocaleString()}
-              </div>
-              {notif.meetingLink && (
-                <a
-                  href={notif.meetingLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-indigo-600 text-sm font-semibold hover:underline"
-                >
-                  Join Meeting
-                </a>
+            <li
+              key={notif._id}
+              className="p-4 border rounded-lg shadow-sm bg-white flex items-start gap-4"
+            >
+              {/* Profile Picture or fallback */}
+              {notif.sender?.profile?.profilePhoto ? (
+                <img
+                  src={notif.sender.profile.profilePhoto}
+                  alt={`${notif.sender.fullname}'s profile`}
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 flex-shrink-0 font-semibold">
+                  {notif.sender?.fullname?.charAt(0).toUpperCase() || "U"}
+                </div>
               )}
+
+              {/* Notification Text */}
+              <div>
+                <div className="text-sm text-gray-800 font-medium">
+                  {notif.sender?.fullname || "Someone"}: {notif.message}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {new Date(notif.createdAt).toLocaleString()}
+                </div>
+                {notif.meetingLink && (
+                  <a
+                    href={notif.meetingLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-indigo-600 text-sm font-semibold hover:underline"
+                  >
+                    Join Meeting
+                  </a>
+                )}
+              </div>
             </li>
           ))}
         </ul>

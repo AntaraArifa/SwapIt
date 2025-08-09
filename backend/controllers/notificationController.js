@@ -30,7 +30,7 @@ export const sendSessionMeetingLink = async (req, res) => {
 export const getNotifications = async (req, res) => {
     try {
         const userId = req.user.userId; 
-        const notifications = await Notification.find({ recipient: userId }).populate("sender","fullname").sort({ createdAt: -1 }); // Sort by timestamp, descending
+        const notifications = await Notification.find({ recipient: userId }).populate('sender', 'fullname profile.profilePhoto').sort({ createdAt: -1 }); // Sort by timestamp, descending
        
         res.json({ success: true, notifications });
     } catch (err) {

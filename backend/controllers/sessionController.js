@@ -1,6 +1,7 @@
 import Session from "../models/session.js";
 import SkillListing from "../models/skillListing.js";
 import Notification from "../models/notificationModel.js"
+import { User } from "../models/user.model.js";
 
 
 // Learner creates a session request
@@ -116,6 +117,28 @@ export const updateSessionStatus = async (req, res) => {
 
     session.status = status;
     await session.save();
+   const teacher = await User.findById(userId).select('fullname');
+    const teacherName = teacher ? teacher.fullname : "Teacher";
+
+    let notifMessage = "";
+    if (status === "accepted") {
+      notifMessage = `Your session request has been accepted by ${teacherName}`;
+    } else if (status === "rejected") {
+      notifMessage = `Your session request has been rejected by ${teacherName}`;
+    } else if (status === "cancelled") {
+      notifMessage = `Your session has been cancelled by ${teacherName}`;
+    } else if (status === "completed") {
+      notifMessage = `Your session has been marked as completed by ${teacherName}`;
+    }
+
+    const notification = new Notification({
+      recipient: session.learnerID, // assuming studentID field in Session
+      sender: userId,
+      message: notifMessage,
+    });
+
+    await notification.save();
+    
 
     res.status(200).json({ message: "Session status updated", success: true, session });
   } catch (err) {
@@ -179,6 +202,15 @@ export const proposeReschedule = async (req, res) => {
     }
 
     await session.save();
+    const notificationMessage = `Teacher has proposed to reschedule your session "${session.skillName}" to ${newDate} at ${newTime}.`;
+
+    const notification = new Notification({
+      sender: userId,                  // Teacher is sender
+      recipient: session.learnerID,   // Learner is recipient (check your field name)
+      message: notificationMessage,
+    });
+
+    await notification.save();
 
     res.status(200).json({ message: "Reschedule proposed", success: true, session });
   } catch (err) {
