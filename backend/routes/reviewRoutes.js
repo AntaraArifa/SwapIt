@@ -42,4 +42,7 @@ router.get('/average/:listingId', isAuthenticated, reviewController.getAverageRa
 // Get a specific review by ID (must come after specific routes)
 router.get('/:id', isAuthenticated, reviewController.getReviewById);
 
+// Check course completion status for a user (for reviews)
+router.get('/course-completion/:learnerID/:teacherID/:listingID', isAuthenticated, reviewController.checkCourseCompletionStatusForReview);
+
 export default router;

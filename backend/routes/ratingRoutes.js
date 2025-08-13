@@ -40,4 +40,7 @@ router.get('/learner/:learnerId', isAuthenticated, ratingController.getRatingsBy
 // Get average ratings for a specific teacher
 router.get('/teacher/:teacherId/average', isAuthenticated, ratingController.getAverageRatingsByTeacherId);
 
+// Check course completion status for a user
+router.get('/course-completion/:learnerID/:teacherID/:listingID', isAuthenticated, ratingController.checkCourseCompletionStatus);
+
 export default router;
