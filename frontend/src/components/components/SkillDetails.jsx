@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Star, BookOpen, MessageCircle, Calendar, Award, Edit } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import ListingReviews from "./ListingReviews";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
 
 const SkillDetails = () => {
@@ -15,6 +16,10 @@ const SkillDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTab, setSelectedTab] = useState("overview");
+  const [reviewStats, setReviewStats] = useState({
+    totalReviews: 0,
+    averageRating: 0
+  });
 
   // Fetch skill details from API
   useEffect(() => {
@@ -77,6 +82,8 @@ const SkillDetails = () => {
 
         if (data.success) {
           setSkill(data.listing);
+          // Fetch review stats for the listing
+          fetchReviewStats(data.listing._id);
         } else {
           throw new Error(data.message || "Failed to fetch skill details");
         }
@@ -94,6 +101,45 @@ const SkillDetails = () => {
       setError("No skill ID provided");
     }
   }, [id]);
+
+  // Fetch review statistics for the listing
+  const fetchReviewStats = async (listingId) => {
+    try {
+      const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(";").shift();
+        return null;
+      };
+
+      const token = getCookie("token");
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(buildApiUrl(`/reviews/listing/${listingId}`), {
+        method: "GET",
+        headers: headers,
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setReviewStats({
+            totalReviews: data.totalReviews || 0,
+            averageRating: data.averageRating || 0
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching review stats:', error);
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -266,14 +312,14 @@ const SkillDetails = () => {
 
                   {/* Rating on bottom-right corner */}
                   <div className="flex items-center gap-1 ml-4">
-                    {skill.avgRating > 0 ? (
+                    {reviewStats.averageRating > 0 ? (
                       <>
                         <Star className="h-5 w-5 fill-yellow-400 text-yellow-400 drop-shadow-lg" />
                         <span className="font-semibold text-lg text-white drop-shadow-lg">
-                          {skill.avgRating}
+                          {reviewStats.averageRating.toFixed(1)}
                         </span>
                         <span className="text-white/80 drop-shadow-lg">
-                          (0 reviews)
+                          ({reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? 'review' : 'reviews'})
                         </span>
                       </>
                     ) : (
@@ -362,13 +408,7 @@ const SkillDetails = () => {
 
               {selectedTab === "reviews" && (
                 <div>
-                  <h3 className="text-xl font-semibold mb-4 text-gray-900">
-                    Student Reviews
-                  </h3>
-                  <div className="text-center py-8 text-gray-500">
-                    <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No reviews yet. Be the first to review this skill!</p>
-                  </div>
+                  <ListingReviews listingId={skill._id} />
                 </div>
               )}
             </div>
