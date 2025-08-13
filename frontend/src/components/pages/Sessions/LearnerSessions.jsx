@@ -12,7 +12,7 @@ import {
 } from "../../../config/api";
 import { groupSessionsByStatus } from "../../../lib/sessionUtils";
 
-// small, clean icons for section headers
+
 const iconFor = (status) => {
   switch (status) {
     case "accepted":
@@ -70,15 +70,15 @@ const SessionCard = ({
   return (
     <li className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-5 border border-indigo-100 space-y-2.5">
       <p className="text-base md:text-lg font-semibold text-indigo-900">
-        🎯 {session.skillName || session.skillListingID?.title || "N/A"}
+        {session.skillName || session.skillListingID?.title || "N/A"}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm md:text-base text-gray-700">
-        <p><strong className="text-indigo-700">👩‍🏫 Teacher:</strong> {session.teacherID?.fullname || "N/A"}</p>
-        <p><strong className="text-indigo-700">💵 Price:</strong> ৳{session.price || session.skillListingID?.fee || "N/A"}</p>
-        <p><strong className="text-indigo-700">🕒 Time Slot:</strong> {scheduledLabel}</p>
+        <p><strong className="text-indigo-700">Teacher:</strong> {session.teacherID?.fullname || "N/A"}</p>
+        <p><strong className="text-indigo-700">Price:</strong> ৳{session.price || session.skillListingID?.fee || "N/A"}</p>
+        <p><strong className="text-indigo-700">Time Slot:</strong> {scheduledLabel}</p>
         <p>
-          <strong className="text-indigo-700">📌 Status:</strong>{" "}
+          <strong className="text-indigo-700">Status:</strong>{" "}
           <span
             className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[11px] tracking-wide
               ${
@@ -102,7 +102,7 @@ const SessionCard = ({
       {session.status === "rescheduled" && session.rescheduleRequest && (
         <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-amber-900 font-medium">
           <p className="mb-2 text-sm">
-            <strong>📅 New Time Slot:</strong>{" "}
+            <strong>New Time Slot:</strong>{" "}
             {(() => {
               const { newDate, newTime } = session.rescheduleRequest || {};
               if (newDate && newTime) {
@@ -188,7 +188,7 @@ const LearnerSessions = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
 
-  // rating checks (unchanged)
+  // rating checks
   const checkSessionRating = async (skillListingId) => {
     if (!user || !skillListingId) return false;
     try {
@@ -309,7 +309,7 @@ const LearnerSessions = () => {
   return (
     <div className="p-6 md:p-8 max-w-4xl mx-auto bg-gradient-to-br from-indigo-50 via-white to-indigo-50 min-h-screen rounded-2xl shadow-xl">
       <h2 className="text-2xl md:text-3xl font-extrabold mb-6 text-indigo-900 border-b-2 border-indigo-600 pb-3 tracking-tight">
-        📚 My Session Requests
+        My Session Requests
       </h2>
 
       {loading ? (
