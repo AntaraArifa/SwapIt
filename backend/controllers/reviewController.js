@@ -59,18 +59,29 @@ export const createReview = async (req, res) => {
             });
         }
 
-        // Check if the learner has completed a session for this listing
-        const completedSession = await Session.findOne({
+        // Check if the learner has completed ALL sessions for this listing
+        const allSessionsForListing = await Session.find({
             learnerID: learnerID,
             teacherID: teacherID,
-            skillListingID: listingID,
-            status: "completed"
+            skillListingID: listingID
         });
 
-        if (!completedSession) {
+        if (allSessionsForListing.length === 0) {
             return res.status(403).json({
-                message: "You can only review courses you have completed",
+                message: "You must book at least one session for this course before reviewing it",
                 success: false
+            });
+        }
+
+        const completedSessions = allSessionsForListing.filter(session => session.status === "completed");
+        const totalSessions = allSessionsForListing.length;
+
+        if (completedSessions.length < totalSessions) {
+            return res.status(403).json({
+                message: `You can only review this course after completing all sessions. You have completed ${completedSessions.length} out of ${totalSessions} sessions.`,
+                success: false,
+                completedSessions: completedSessions.length,
+                totalSessions: totalSessions
             });
         }
 
@@ -601,6 +612,93 @@ export const clearAllReviews = async (req, res) => {
         console.error("Error clearing reviews:", error);
         return res.status(500).json({
             message: "Error clearing reviews",
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+// Check course completion status for a user (for reviews)
+export const checkCourseCompletionStatusForReview = async (req, res) => {
+    try {
+        const { learnerID, teacherID, listingID } = req.params;
+        const userId = req.user.userId; // From middleware
+
+        // Validate required fields
+        if (!learnerID || !teacherID || !listingID) {
+            return res.status(400).json({
+                message: "Learner ID, Teacher ID, and Listing ID are required",
+                success: false
+            });
+        }
+
+        // Check if the current user is the learner
+        if (learnerID !== userId) {
+            return res.status(403).json({
+                message: "You can only check your own course completion status",
+                success: false
+            });
+        }
+
+        // Get all sessions for this course
+        const allSessionsForListing = await Session.find({
+            learnerID: learnerID,
+            teacherID: teacherID,
+            skillListingID: listingID
+        });
+
+        if (allSessionsForListing.length === 0) {
+            return res.status(200).json({
+                message: "No sessions found for this course",
+                success: true,
+                courseCompletion: {
+                    totalSessions: 0,
+                    completedSessions: 0,
+                    isCompleted: false,
+                    canReview: false,
+                    progress: 0
+                }
+            });
+        }
+
+        const completedSessions = allSessionsForListing.filter(session => session.status === "completed");
+        const totalSessions = allSessionsForListing.length;
+        const isCompleted = completedSessions.length === totalSessions;
+        const progress = totalSessions > 0 ? Math.round((completedSessions.length / totalSessions) * 100) : 0;
+
+        // Check if user can review (only if course is completed)
+        const canReview = isCompleted;
+
+        // Check if user has already reviewed this course
+        const existingReview = await Review.findOne({
+            learnerID,
+            teacherID,
+            listingID
+        });
+
+        return res.status(200).json({
+            message: "Course completion status for review retrieved successfully",
+            success: true,
+            courseCompletion: {
+                totalSessions,
+                completedSessions: completedSessions.length,
+                isCompleted,
+                canReview,
+                hasReviewed: !!existingReview,
+                progress,
+                sessions: allSessionsForListing.map(session => ({
+                    _id: session._id,
+                    status: session.status,
+                    scheduledTime: session.scheduledTime,
+                    skillName: session.skillName
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error("Error checking course completion status for review:", error);
+        return res.status(500).json({
+            message: "Internal server error",
             success: false,
             error: error.message
         });

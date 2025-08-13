@@ -50,18 +50,29 @@ export const createRating = async (req, res) => {
             });
         }
 
-        // Check if the learner has completed a session for this listing
-        const completedSession = await Session.findOne({
+        // Check if the learner has completed ALL sessions for this listing
+        const allSessionsForListing = await Session.find({
             learnerID: learnerID,
             teacherID: teacherID,
-            skillListingID: listingID,
-            status: "completed"
+            skillListingID: listingID
         });
 
-        if (!completedSession) {
+        if (allSessionsForListing.length === 0) {
             return res.status(403).json({
-                message: "You can only rate courses you have completed",
+                message: "You must book at least one session for this course before rating it",
                 success: false
+            });
+        }
+
+        const completedSessions = allSessionsForListing.filter(session => session.status === "completed");
+        const totalSessions = allSessionsForListing.length;
+
+        if (completedSessions.length < totalSessions) {
+            return res.status(403).json({
+                message: `You can only rate this course after completing all sessions. You have completed ${completedSessions.length} out of ${totalSessions} sessions.`,
+                success: false,
+                completedSessions: completedSessions.length,
+                totalSessions: totalSessions
             });
         }
 
@@ -657,6 +668,88 @@ export const getAverageRatingsByTeacherId = async (req, res) => {
 
     } catch (error) {
         console.error("Error getting average ratings by teacher ID:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+// Check course completion status for a user
+export const checkCourseCompletionStatus = async (req, res) => {
+    try {
+        const { learnerID, teacherID, listingID } = req.params;
+        const userId = req.user.userId; // From middleware
+
+        // Validate required fields
+        if (!learnerID || !teacherID || !listingID) {
+            return res.status(400).json({
+                message: "Learner ID, Teacher ID, and Listing ID are required",
+                success: false
+            });
+        }
+
+        // Check if the current user is the learner
+        if (learnerID !== userId) {
+            return res.status(403).json({
+                message: "You can only check your own course completion status",
+                success: false
+            });
+        }
+
+        // Get all sessions for this course
+        const allSessionsForListing = await Session.find({
+            learnerID: learnerID,
+            teacherID: teacherID,
+            skillListingID: listingID
+        });
+
+        if (allSessionsForListing.length === 0) {
+            return res.status(200).json({
+                message: "No sessions found for this course",
+                success: true,
+                courseCompletion: {
+                    totalSessions: 0,
+                    completedSessions: 0,
+                    isCompleted: false,
+                    canRate: false,
+                    canReview: false,
+                    progress: 0
+                }
+            });
+        }
+
+        const completedSessions = allSessionsForListing.filter(session => session.status === "completed");
+        const totalSessions = allSessionsForListing.length;
+        const isCompleted = completedSessions.length === totalSessions;
+        const progress = totalSessions > 0 ? Math.round((completedSessions.length / totalSessions) * 100) : 0;
+
+        // Check if user can rate/review (only if course is completed)
+        const canRate = isCompleted;
+        const canReview = isCompleted;
+
+        return res.status(200).json({
+            message: "Course completion status retrieved successfully",
+            success: true,
+            courseCompletion: {
+                totalSessions,
+                completedSessions: completedSessions.length,
+                isCompleted,
+                canRate,
+                canReview,
+                progress,
+                sessions: allSessionsForListing.map(session => ({
+                    _id: session._id,
+                    status: session.status,
+                    scheduledTime: session.scheduledTime,
+                    skillName: session.skillName
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error("Error checking course completion status:", error);
         return res.status(500).json({
             message: "Internal server error",
             success: false,
