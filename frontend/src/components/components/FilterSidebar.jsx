@@ -16,21 +16,21 @@ const FilterSidebar = ({ filters, onFiltersChange }) => {
           Price Range
         </h3>
         <div className="space-y-4">
-          <div>
-            <label className="text-sm text-gray-600">Up to ${filters.maxPrice}/session</label>
+          <div className="space-y-2">
+            <label className="text-sm text-gray-600">Up to ৳{filters.maxPrice || 100000}/session</label>
             <input
               type="range"
-              min="5"
-              max="200"
-              step="5"
-              value={filters.maxPrice}
+              min="0"
+              max={filters.maxPrice || 100000}
+              step="25"
+              value={filters.maxPrice || 100000}
               onChange={(e) => updateFilter("maxPrice", Number.parseInt(e.target.value))}
               className="w-full mt-2"
             />
           </div>
           <div className="flex justify-between text-sm text-gray-500">
-            <span>$5</span>
-            <span>$200+</span>
+            <span>৳0</span>
+            <span>৳{filters.maxPrice || 100000}+</span>
           </div>
         </div>
       </div>

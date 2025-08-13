@@ -89,6 +89,19 @@ export const createRating = async (req, res) => {
 
         await newRating.save();
 
+        // Calculate and update the average rating for the listing
+        const allRatingsForListing = await Rating.find({ listingID });
+        const totalRatings = allRatingsForListing.length;
+        const sumOfRatings = allRatingsForListing.reduce((sum, r) => sum + r.rating, 0);
+        const newAvgRating = parseFloat((sumOfRatings / totalRatings).toFixed(1));
+
+        // Update the listing's avgRating
+        await SkillListing.findByIdAndUpdate(
+            listingID,
+            { avgRating: newAvgRating },
+            { new: true }
+        );
+
         // Populate the rating with related data
         const populatedRating = await Rating.findById(newRating._id)
             .populate('learnerID', 'fullname email')
@@ -98,7 +111,11 @@ export const createRating = async (req, res) => {
         return res.status(201).json({
             message: "Rating created successfully",
             success: true,
-            rating: populatedRating
+            rating: populatedRating,
+            listingStats: {
+                totalRatings,
+                avgRating: newAvgRating
+            }
         });
 
     } catch (error) {

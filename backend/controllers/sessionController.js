@@ -1,5 +1,8 @@
 import Session from "../models/session.js";
 import SkillListing from "../models/skillListing.js";
+import Notification from "../models/notificationModel.js"
+import { User } from "../models/user.model.js";
+
 
 // Learner creates a session request
 export const createSession = async (req, res) => {
@@ -11,21 +14,22 @@ export const createSession = async (req, res) => {
     if (!skillListing) {
       return res.status(404).json({ message: "Skill listing not found", success: false });
     }
-    // Only match the time part (HH:mm) with availableSlots
+
     if (!slotTime || !skillListing.availableSlots.includes(slotTime)) {
       return res.status(400).json({ message: "Selected time slot is not available", success: false });
     }
-    // Combine date and time into a Date object
+
     if (!slotDate) {
       return res.status(400).json({ message: "Date is required", success: false });
     }
+
     const scheduledTime = new Date(`${slotDate}T${slotTime}`);
 
-    // Check for existing session for this skillListing, date, and time
     const existingSession = await Session.findOne({
       skillListingID,
-      scheduledTime: scheduledTime,
+      scheduledTime,
     });
+
     if (existingSession) {
       return res.status(400).json({ message: "This slot is already booked for the selected date.", success: false });
     }
@@ -42,12 +46,26 @@ export const createSession = async (req, res) => {
 
     await newSession.save();
 
-    res.status(201).json({ message: "Session request sent", success: true, session: newSession });
+    // ✅ Create notification for the teacher
+    const notification = new Notification({
+      recipient: teacherID,
+      sender: learnerID,
+      message: `A session has been booked for "${skillListing.title}" on ${slotDate} at ${slotTime}.`,
+    });
+
+    await notification.save();
+
+    res.status(201).json({
+      message: "Session request sent",
+      success: true,
+      session: newSession,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
+
 
 // Get all sessions of a user (learner or teacher), with optional filtering by status and date range
 export const getUserSessions = async (req, res) => {
@@ -99,6 +117,28 @@ export const updateSessionStatus = async (req, res) => {
 
     session.status = status;
     await session.save();
+   const teacher = await User.findById(userId).select('fullname');
+    const teacherName = teacher ? teacher.fullname : "Teacher";
+
+    let notifMessage = "";
+    if (status === "accepted") {
+      notifMessage = `Your session request for "${session.skillName}" has been accepted by ${teacherName}`;
+    } else if (status === "rejected") {
+      notifMessage = `Your session request for "${session.skillName}" has been rejected by ${teacherName}`;
+    } else if (status === "cancelled") {
+      notifMessage = `Your session for "${session.skillName}" has been cancelled by ${teacherName}`;
+    } else if (status === "completed") {
+      notifMessage = `Your session for "${session.skillName}" has been marked as completed by ${teacherName}`;
+    }
+
+    const notification = new Notification({
+      recipient: session.learnerID, // assuming studentID field in Session
+      sender: userId,
+      message: notifMessage,
+    });
+
+    await notification.save();
+    
 
     res.status(200).json({ message: "Session status updated", success: true, session });
   } catch (err) {
@@ -162,6 +202,15 @@ export const proposeReschedule = async (req, res) => {
     }
 
     await session.save();
+    const notificationMessage = `Teacher has proposed to reschedule your session "${session.skillName}" to ${newDate} at ${newTime}.`;
+
+    const notification = new Notification({
+      sender: userId,                  // Teacher is sender
+      recipient: session.learnerID,   // Learner is recipient (check your field name)
+      message: notificationMessage,
+    });
+
+    await notification.save();
 
     res.status(200).json({ message: "Reschedule proposed", success: true, session });
   } catch (err) {
@@ -268,4 +317,3 @@ export const getTeacherSessions = async (req, res) => {
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
-

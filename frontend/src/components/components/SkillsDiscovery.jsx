@@ -8,6 +8,7 @@ import SkillCategories from "./SkillCategories";
 import { skillCategories } from "../data/mockData";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
 import ChatBox from "../pages/Chat/ChatBox";
+import axios from "axios";
 
 const SkillsDiscovery = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,7 +17,7 @@ const SkillsDiscovery = () => {
   const [filters, setFilters] = useState({
     location: "",
     minRating: 0,
-    maxPrice: 1000,
+    maxPrice: 100000, // Will be updated based on API data
     proficiency: "any",
   });
   const [allSkills, setAllSkills] = useState([]);
@@ -27,6 +28,13 @@ const SkillsDiscovery = () => {
   const [error, setError] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState(null);
+
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+    return null;
+  };
 
   // Fetch skills and tags from API
   useEffect(() => {
@@ -86,6 +94,19 @@ const SkillsDiscovery = () => {
         if (skillsData.success) {
           setAllSkills(skillsData.listings);
           setFilteredSkills(skillsData.listings);
+
+          // Calculate the maximum price from the skills data
+          if (skillsData.listings && skillsData.listings.length > 0) {
+            const maxPriceFromData = Math.max(
+              ...skillsData.listings.map((skill) => skill.fee || 0)
+            );
+            // Add some buffer to the max price (round up to nearest thousand)
+            const bufferedMaxPrice = Math.ceil(maxPriceFromData / 1000) * 1000;
+            setFilters((prevFilters) => ({
+              ...prevFilters,
+              maxPrice: Math.max(bufferedMaxPrice, 1000), // Ensure minimum of 1000
+            }));
+          }
         } else {
           throw new Error(skillsData.message || "Failed to fetch skills");
         }
@@ -179,9 +200,24 @@ const SkillsDiscovery = () => {
     setFilteredSkills(filtered);
   }, [allSkills, searchQuery, selectedCategory, filters, sortBy]);
 
-  const handleMessageClick = (instructor) => {
-    setSelectedInstructor(instructor);
-    setChatVisible(true);
+  const handleMessageClick = async (receiver) => {
+    try {
+      const token = getCookie("token");
+      const res = await axios.post(
+        "http://localhost:3000/api/v1/chat/chat",
+        { userId: receiver._id },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        }
+      );
+
+      const chatId = res.data._id;
+      setSelectedInstructor({ ...receiver, chatId });
+      setChatVisible(true);
+    } catch (err) {
+      console.error("Error opening chat", err);
+    }
   };
 
   const handleCloseChat = () => {
@@ -332,7 +368,7 @@ const SkillsDiscovery = () => {
               <ChatBox
                 visible={chatVisible}
                 onClose={handleCloseChat}
-                instructor={selectedInstructor}
+                receiver={selectedInstructor}
               />
 
               {/* No Results */}

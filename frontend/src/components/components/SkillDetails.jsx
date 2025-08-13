@@ -3,23 +3,45 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Star, BookOpen, MessageCircle, Calendar, Award, Edit } from "lucide-react";
+import {
+  Star,
+  BookOpen,
+  MessageCircle,
+  Calendar,
+  Award,
+  Edit,
+} from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ListingReviews from "./ListingReviews";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
+import CourseStudents from "./CourseStudents";
+import axios from "axios";
+import ChatBox from "../pages/Chat/ChatBox";
 
-const SkillDetails = () => {
+const SkillDetails = (onMessageClick) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const user = useSelector(state => state.auth.user);
+  const user = useSelector((state) => state.auth.user);
   const [skill, setSkill] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTab, setSelectedTab] = useState("overview");
-  const [reviewStats, setReviewStats] = useState({
-    totalReviews: 0,
-    averageRating: 0
-  });
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState(null);
+  const [registrationStatus, setRegistrationStatus] = useState("notRegistered");
+  const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [chatVisible, setChatVisible] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedInstructor, setSelectedInstructor] = useState(null);
+  
+
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+    return null;
+  };
 
   // Fetch skill details from API
   useEffect(() => {
@@ -102,45 +124,6 @@ const SkillDetails = () => {
     }
   }, [id]);
 
-  // Fetch review statistics for the listing
-  const fetchReviewStats = async (listingId) => {
-    try {
-      const getCookie = (name) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(";").shift();
-        return null;
-      };
-
-      const token = getCookie("token");
-      const headers = {
-        "Content-Type": "application/json",
-      };
-
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(buildApiUrl(`/reviews/listing/${listingId}`), {
-        method: "GET",
-        headers: headers,
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setReviewStats({
-            totalReviews: data.totalReviews || 0,
-            averageRating: data.averageRating || 0
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching review stats:', error);
-    }
-  };
-
   // Loading state
   if (loading) {
     return (
@@ -217,40 +200,89 @@ const SkillDetails = () => {
   const convertTo12Hour = (time24) => {
     // Handle different time formats
     const timeStr = time24.toString().trim();
-    
+
     // If already in 12-hour format, return as is
-    if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+    if (
+      timeStr.toLowerCase().includes("am") ||
+      timeStr.toLowerCase().includes("pm")
+    ) {
       return timeStr;
     }
-    
-    // Parse 24-hour format (e.g., "09:30", "9:30", "0930")
-    let hours, minutes;
-    
-    if (timeStr.includes(':')) {
-      [hours, minutes] = timeStr.split(':');
+
+    // Parse 24-hour format (e.g., "09:30", "9:30", "0930", "10:00", "14:00")
+    let hours,
+      minutes = "00";
+
+    if (timeStr.includes(":")) {
+      const parts = timeStr.split(":");
+      hours = parts[0];
+      minutes = parts[1] || "00";
     } else if (timeStr.length === 4) {
       // Handle format like "0930"
       hours = timeStr.substring(0, 2);
       minutes = timeStr.substring(2, 4);
+    } else if (timeStr.length === 1 || timeStr.length === 2) {
+      // Handle format like "9" or "14"
+      hours = timeStr;
+      minutes = "00";
     } else {
       return timeStr; // Return original if format is unrecognized
     }
-    
+
     hours = parseInt(hours);
     minutes = parseInt(minutes);
-    
+
     // Validate hours and minutes
-    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    if (
+      isNaN(hours) ||
+      isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
       return timeStr; // Return original if invalid
     }
-    
-    const period = hours >= 12 ? 'PM' : 'AM';
+
+    const period = hours >= 12 ? "PM" : "AM";
     const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    const displayMinutes = minutes.toString().padStart(2, '0');
-    
+    const displayMinutes = minutes.toString().padStart(2, "0");
+
     return `${displayHours}:${displayMinutes} ${period}`;
   };
 
+  // Helper function to render star rating
+  const renderStarRating = (rating) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <Star
+          key={i}
+          className={`h-4 w-4 ${
+            i <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+          }`}
+        />
+      );
+    }
+    return stars;
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "Date not available";
+    }
+  };
+  const handleCloseChat = () => {
+    setChatVisible(false);
+    setSelectedStudent(null);
+  };
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -319,7 +351,7 @@ const SkillDetails = () => {
                           {reviewStats.averageRating.toFixed(1)}
                         </span>
                         <span className="text-white/80 drop-shadow-lg">
-                          ({reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? 'review' : 'reviews'})
+                          (0 reviews)
                         </span>
                       </>
                     ) : (
@@ -360,11 +392,13 @@ const SkillDetails = () => {
             <div className="p-6">
               {selectedTab === "overview" && (
                 <div>
-                  {/* <h2 className="text-xl font-semibold mb-4 text-gray-900">Course Description</h2> */}
-                  <MarkdownRenderer
-                    content={skill.description}
-                    className="mb-6 text-gray-600 leading-relaxed"
-                  />
+                  {/* Course Description */}
+                  <div className="mb-8">
+                    <MarkdownRenderer
+                      content={skill.description}
+                      className="text-gray-600 leading-relaxed"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -408,12 +442,37 @@ const SkillDetails = () => {
 
               {selectedTab === "reviews" && (
                 <div>
-                  <ListingReviews listingId={skill._id} />
+                  <h3 className="text-xl font-semibold mb-4 text-gray-900">
+                    Student Reviews
+                  </h3>
+                  <div className="text-center py-8 text-gray-500">
+                    <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No reviews yet. Be the first to review this skill!</p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
+          <div className="mt-8">
+            {/* Course Students Section - Only visible to course teacher */}
+            {user && skill.teacherID._id === user._id && (
+              <div className="border-t border-gray-200 pt-8">
+                <h3 className="text-xl font-semibold mb-6 text-gray-900">
+                  Registered Students
+                </h3>
+                <CourseStudents
+                  courseId={skill._id}
+                  onMessageClick={handleMessageClick}
+                />
+              </div>
+            )}
+          </div>
         </div>
+        <ChatBox
+          visible={chatVisible}
+          onClose={handleCloseChat}
+          receiver={selectedStudent}
+        />
 
         {/* Sidebar */}
         <div className="space-y-6">
@@ -423,7 +482,6 @@ const SkillDetails = () => {
               <span className="text-3xl font-bold text-gray-900">
                 Taka {skill.fee}
               </span>
-              <span className="text-lg text-gray-600">/session</span>
             </div>
             <div className="space-y-3">
               {/* Check if current user is the listing owner */}
@@ -436,20 +494,65 @@ const SkillDetails = () => {
                   Edit Listing
                 </button>
               ) : (
-                <button
-                  onClick={() =>
-                    navigate(`/book-session/${skill._id}`, {
-                      state: { teacherID: skill.teacherID._id }, // pass teacherID here
-                    })
-                  }
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Book a Session
-                </button>
+                <>
+                  {/* Show different buttons based on registration status */}
+                  {checkingRegistration ? (
+                    <button
+                      disabled
+                      className="w-full bg-gray-400 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2"
+                    >
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Checking...
+                    </button>
+                  ) : registrationStatus === "notRegistered" ? (
+                    <button
+                      onClick={() => navigate(`/skills/register/${skill._id}`)}
+                      className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Register for Course
+                    </button>
+                  ) : registrationStatus === "pending" ? (
+                    <button
+                      disabled
+                      className="w-full bg-yellow-400 text-yellow-900 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Pending Approval
+                    </button>
+                  ) : registrationStatus === "registered" ? (
+                    <button
+                      onClick={() =>
+                        navigate(`/book-session/${skill._id}`, {
+                          state: { teacherID: skill.teacherID._id },
+                        })
+                      }
+                      className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Book a Session
+                    </button>
+                  ) : registrationStatus === "completed" ? (
+                    <button
+                      disabled
+                      className="w-full bg-green-400 text-green-900 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Course Completed
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => navigate(`/skills/register/${skill._id}`)}
+                      className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" />
+                      Register for Course
+                    </button>
+                  )}
+                </>
               )}
 
-              <button className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
+              <button onClick={() => handleMessageClick(skill.teacherID)} className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Contact Instructor
               </button>
@@ -486,8 +589,10 @@ const SkillDetails = () => {
                 </div>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Session Duration</span>
-                <span className="font-medium text-gray-900">1 hour</span>
+                <span className="text-gray-600">Course Duration</span>
+                <span className="font-medium text-gray-900">
+                  {skill.duration || "Not specified"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Format</span>
@@ -506,7 +611,28 @@ const SkillDetails = () => {
                       </span>
                     ))
                   ) : (
-                    <span className="font-medium text-gray-900">No slots available</span>
+                    <span className="font-medium text-gray-900">
+                      No slots available
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Payment Methods</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {skill.paymentMethods && skill.paymentMethods.length > 0 ? (
+                    skill.paymentMethods.map((method, index) => (
+                      <span
+                        key={index}
+                        className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium"
+                      >
+                        {method.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="font-medium text-gray-900">
+                      Not specified
+                    </span>
                   )}
                 </div>
               </div>
@@ -577,6 +703,11 @@ const SkillDetails = () => {
           </div>
         </div>
       </div>
+      <ChatBox
+        visible={chatVisible}
+        onClose={() => setChatVisible(false)}
+        receiver={selectedInstructor}
+      />
     </div>
   );
 };
