@@ -12,6 +12,7 @@ import {
   Edit,
 } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import ListingReviews from "./ListingReviews";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
 import CourseStudents from "./CourseStudents";
 import axios from "axios";
@@ -103,6 +104,8 @@ const SkillDetails = (onMessageClick) => {
 
         if (data.success) {
           setSkill(data.listing);
+          // Fetch review stats for the listing
+          fetchReviewStats(data.listing._id);
         } else {
           throw new Error(data.message || "Failed to fetch skill details");
         }
@@ -120,199 +123,6 @@ const SkillDetails = (onMessageClick) => {
       setError("No skill ID provided");
     }
   }, [id]);
-  const handleMessageClick = async (receiver) => {
-    try {
-      const token = getCookie("token");
-      const res = await axios.post(
-        "http://localhost:3000/api/v1/chat/chat",
-        { userId: receiver._id },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        }
-      );
-
-      const chatId = res.data._id;
-      setSelectedStudent({ ...receiver, chatId });
-      setChatVisible(true);
-    } catch (err) {
-      console.error("Error opening chat", err);
-    }
-  };
-
-  // Fetch reviews for the listing
-  const fetchReviews = async () => {
-    if (!id) return;
-
-    try {
-      setReviewsLoading(true);
-      setReviewsError(null);
-
-      // Get token from cookies
-      const getCookie = (name) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(";").shift();
-        return null;
-      };
-
-      const token = getCookie("token");
-
-      const headers = {
-        "Content-Type": "application/json",
-      };
-
-      // Add authorization header if token exists
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`${buildApiUrl("")}/reviews/listing/${id}`, {
-        method: "GET",
-        headers: headers,
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setReviews(data.reviews || []);
-        } else {
-          setReviewsError(data.message || "Failed to fetch reviews");
-        }
-      } else {
-        setReviewsError("Failed to fetch reviews");
-      }
-    } catch (err) {
-      setReviewsError("Error fetching reviews");
-      console.error("Error fetching reviews:", err);
-    } finally {
-      setReviewsLoading(false);
-    }
-  };
-
-  // Fetch reviews when component loads
-  useEffect(() => {
-    if (id && reviews.length === 0 && !reviewsLoading) {
-      fetchReviews();
-    }
-  }, [id]);
-
-  // Check registration status for the course
-  const checkRegistration = async () => {
-    if (!user || !id) return;
-
-    try {
-      setCheckingRegistration(true);
-
-      // Get token from cookies
-      const getCookie = (name) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(";").shift();
-        return null;
-      };
-
-      const token = getCookie("token");
-
-      const headers = {
-        "Content-Type": "application/json",
-      };
-
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.COURSES.CHECK), {
-        method: "POST",
-        headers: headers,
-        credentials: "include",
-        body: JSON.stringify({
-          studentId: user._id,
-          courseId: id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        // Set the registration status from API response
-        setRegistrationStatus(data.status || "notRegistered");
-      } else {
-        // If API call fails or returns error, assume not registered
-        setRegistrationStatus("notRegistered");
-      }
-    } catch (err) {
-      console.error("Error checking registration:", err);
-      setRegistrationStatus("notRegistered");
-    } finally {
-      setCheckingRegistration(false);
-    }
-  };
-
-  // Check registration when user and skill data are loaded
-  useEffect(() => {
-    if (user && skill && !checkingRegistration) {
-      checkRegistration();
-    }
-  }, [user, skill]);
-
-  // Handle course registration
-  const handleRegister = async () => {
-    if (!user || !skill) return;
-
-    try {
-      // Get token from cookies
-      const getCookie = (name) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(";").shift();
-        return null;
-      };
-
-      const token = getCookie("token");
-
-      const headers = {
-        "Content-Type": "application/json",
-      };
-
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      // For demo purposes, using placeholder data
-      // In a real app, you'd collect this from a form
-      const registrationData = {
-        studentId: user._id,
-        courseId: skill._id,
-        contactNo: user.phone || "+8801712345678", // Use user's phone or placeholder
-        paymentMethod: "bKash", // This should come from a payment form
-        transactionID: "TXN" + Date.now(), // Generate transaction ID
-      };
-
-      const response = await fetch(
-        buildApiUrl(API_ENDPOINTS.COURSES.REGISTER),
-        {
-          method: "POST",
-          headers: headers,
-          credentials: "include",
-          body: JSON.stringify(registrationData),
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        alert("Successfully registered for the course!");
-        setRegistrationStatus("pending"); // Update status to pending after registration
-      } else {
-        alert(data.message || "Failed to register for the course");
-      }
-    } catch (err) {
-      console.error("Error registering for course:", err);
-      alert("An error occurred while registering");
-    }
-  };
 
   // Loading state
   if (loading) {
@@ -534,15 +344,14 @@ const SkillDetails = (onMessageClick) => {
 
                   {/* Rating on bottom-right corner */}
                   <div className="flex items-center gap-1 ml-4">
-                    {skill.avgRating > 0 ? (
+                    {reviewStats.averageRating > 0 ? (
                       <>
                         <Star className="h-5 w-5 fill-yellow-400 text-yellow-400 drop-shadow-lg" />
                         <span className="font-semibold text-lg text-white drop-shadow-lg">
-                          {skill.avgRating}
+                          {reviewStats.averageRating.toFixed(1)}
                         </span>
                         <span className="text-white/80 drop-shadow-lg">
-                          ({reviews.length || 0} review
-                          {reviews.length !== 1 ? "s" : ""})
+                          (0 reviews)
                         </span>
                       </>
                     ) : (
@@ -633,145 +442,13 @@ const SkillDetails = (onMessageClick) => {
 
               {selectedTab === "reviews" && (
                 <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      Student Reviews
-                    </h3>
-                    {reviews.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center">
-                          {renderStarRating(Math.round(skill.avgRating || 0))}
-                        </div>
-                        <span className="text-lg font-semibold text-gray-900">
-                          {skill.avgRating || 0}
-                        </span>
-                        <span className="text-gray-500">
-                          ({reviews.length} review
-                          {reviews.length !== 1 ? "s" : ""})
-                        </span>
-                      </div>
-                    )}
+                  <h3 className="text-xl font-semibold mb-4 text-gray-900">
+                    Student Reviews
+                  </h3>
+                  <div className="text-center py-8 text-gray-500">
+                    <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No reviews yet. Be the first to review this skill!</p>
                   </div>
-
-                  {reviewsLoading ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-gray-600">Loading reviews...</p>
-                    </div>
-                  ) : reviewsError ? (
-                    <div className="text-center py-8 text-red-500">
-                      <p>{reviewsError}</p>
-                      <button
-                        onClick={fetchReviews}
-                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                      >
-                        Try Again
-                      </button>
-                    </div>
-                  ) : reviews.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No reviews yet. Be the first to review this skill!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {reviews.map((review) => (
-                        <div
-                          key={review._id}
-                          className="border-b border-gray-200 pb-6 last:border-b-0"
-                        >
-                          <div className="flex items-start gap-4">
-                            {/* Reviewer Avatar */}
-                            <div className="flex-shrink-0">
-                              {review.learnerID?.profile?.profilePhoto ? (
-                                <img
-                                  src={review.learnerID.profile.profilePhoto}
-                                  alt={review.learnerID.fullname}
-                                  className="w-12 h-12 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-lg font-semibold text-gray-600">
-                                  {review.learnerID?.fullname
-                                    ? review.learnerID.fullname
-                                        .split(" ")
-                                        .map((n) => n[0])
-                                        .join("")
-                                    : "??"}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Review Content */}
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-2">
-                                <div>
-                                  <p className="font-semibold text-gray-900">
-                                    {review.learnerID?.fullname || "Anonymous"}
-                                  </p>
-                                  <p className="text-sm text-gray-500">
-                                    {formatDate(review.createdAt)}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  {renderStarRating(review.rating)}
-                                  <span className="ml-2 text-sm font-medium text-gray-700">
-                                    {review.rating}/5
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Review Text (if available) */}
-                              {review.reviewText && (
-                                <p className="text-gray-700 leading-relaxed">
-                                  {review.reviewText}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-                      {/* Summary Statistics */}
-                      {reviews.length >= 5 && (
-                        <div className="mt-8 bg-gray-50 rounded-lg p-6">
-                          <h4 className="font-semibold text-gray-900 mb-4">
-                            Rating Summary
-                          </h4>
-                          <div className="space-y-2">
-                            {[5, 4, 3, 2, 1].map((rating) => {
-                              const count = reviews.filter(
-                                (r) => r.rating === rating
-                              ).length;
-                              const percentage =
-                                reviews.length > 0
-                                  ? (count / reviews.length) * 100
-                                  : 0;
-
-                              return (
-                                <div
-                                  key={rating}
-                                  className="flex items-center gap-2"
-                                >
-                                  <span className="text-sm font-medium w-8">
-                                    {rating}★
-                                  </span>
-                                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                    <div
-                                      className="bg-yellow-400 h-2 rounded-full"
-                                      style={{ width: `${percentage}%` }}
-                                    ></div>
-                                  </div>
-                                  <span className="text-sm text-gray-600 w-12 text-right">
-                                    {count}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

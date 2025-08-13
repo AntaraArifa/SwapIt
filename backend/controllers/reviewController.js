@@ -330,7 +330,7 @@ export const getReviewsByListing = async (req, res) => {
 
         // Find all reviews for the listing
         const reviews = await Review.find({ listingID: listingId })
-            .populate('learnerID', 'fullname email')
+            .populate('learnerID', 'fullname email profile')
             .populate('teacherID', 'fullname email')
             .populate('listingID', 'title')
             .sort({ createdAt: -1 }); // Sort by newest first
