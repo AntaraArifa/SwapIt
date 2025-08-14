@@ -4,7 +4,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Star } from "lucide-react";
 import { toast } from "sonner";
 import {
   getSessionsByRole,
@@ -59,7 +58,6 @@ const LearnerSessions = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [responding, setResponding] = useState({});
-  const [ratedSessions, setRatedSessions] = useState(new Set());
   const [expandedSessions, setExpandedSessions] = useState({});
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
@@ -158,54 +156,11 @@ const LearnerSessions = () => {
     );
   };
 
-  // rating checks
-  const checkSessionRating = async (skillListingId) => {
-    if (!user || !skillListingId) return false;
-    try {
-      const response = await fetch(
-        `http://localhost:3000/api/v1/ratings/listing/${skillListingId}`,
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-      const data = await response.json();
-      if (data.success && data.ratings && data.ratings.length > 0) {
-        const userRating = data.ratings.find(
-          (r) => r.learnerID._id === user._id || r.learnerID === user._id
-        );
-        return !!userRating;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error checking rating for session:", error);
-      return false;
-    }
-  };
-
-  const checkAllSessionRatings = async (sessionsList) => {
-    const completed = sessionsList.filter((s) => s.status === "completed");
-    const ratedIds = new Set(
-      (
-        await Promise.all(
-          completed.map(async (s) => {
-            const id = s.skillListingID?._id || s.skillListingID;
-            if (!id) return null;
-            const isRated = await checkSessionRating(id);
-            return isRated ? s._id : null;
-          })
-        )
-      ).filter(Boolean)
-    );
-    setRatedSessions(ratedIds);
-  };
-
   const fetchSessions = async () => {
     try {
       const response = await getSessionsByRole("learner");
       const sessionsArray = Array.isArray(response) ? response : response.sessions || [];
       setSessions(sessionsArray);
-      await checkAllSessionRatings(sessionsArray);
     } catch (error) {
       console.error("Error fetching learner sessions:", error);
     } finally {
@@ -225,52 +180,9 @@ const LearnerSessions = () => {
     }
   };
 
-  const handleRateSession = (session) => {
-    if (!user) {
-      toast.error("Please sign in to rate sessions");
-      navigate("/signin", {
-        state: {
-          returnUrl: `/rating/${session.skillListingID?._id || session.skillListingID}`,
-          returnState: { sessionData: session },
-        },
-      });
-      return;
-    }
-    if (user.role !== "learner") {
-      toast.error("Only learners can rate sessions");
-      return;
-    }
-    if (ratedSessions.has(session._id)) {
-      toast.info("You have already rated this session");
-      return;
-    }
-    const skillListingId = session.skillListingID?._id || session.skillListingID;
-    if (skillListingId) {
-      navigate(`/rating/${skillListingId}`, {
-        state: {
-          sessionData: session,
-          teacherID: session.teacherID?._id || session.teacherID,
-          learnerID: session.learnerID?._id || session.learnerID,
-        },
-      });
-    } else {
-      toast.error("Unable to find skill listing information");
-    }
-  };
-
   useEffect(() => {
     fetchSessions();
   }, []);
-
-  useEffect(() => {
-    const whenVisible = () => {
-      if (!document.hidden && sessions.length > 0) {
-        checkAllSessionRatings(sessions);
-      }
-    };
-    document.addEventListener("visibilitychange", whenVisible);
-    return () => document.removeEventListener("visibilitychange", whenVisible);
-  }, [sessions]);
 
   const filteredSessions = getFilteredSessions();
   const groupedTeachers = groupSessionsByTeacher(filteredSessions);
@@ -529,29 +441,6 @@ const LearnerSessions = () => {
                                   {responding[session._id] ? "Please wait..." : "Reject"}
                                 </button>
                               </div>
-                            </div>
-                          )}
-
-                          {/* Rating Section for Completed Sessions */}
-                          {session.status === "completed" && (
-                            <div className="mt-4">
-                              {ratedSessions.has(session._id) ? (
-                                <button
-                                  disabled
-                                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-semibold text-sm"
-                                >
-                                  <Star size={16} />
-                                  Already Rated
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleRateSession(session)}
-                                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold text-sm shadow"
-                                >
-                                  <Star size={16} />
-                                  Rate This Session
-                                </button>
-                              )}
                             </div>
                           )}
                         </div>

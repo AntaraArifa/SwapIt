@@ -657,6 +657,17 @@ const SkillDetails = (onMessageClick) => {
                 </>
               )}
 
+              {/* Course Feedback Button - Only show if course is completed */}
+              {registrationStatus === "completed" && (
+                <button 
+                  onClick={() => navigate(`/rating/${skill._id}`)} 
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-md transition-all duration-200 transform hover:scale-105"
+                >
+                  <Star className="h-4 w-4" />
+                  Share Course Feedback
+                </button>
+              )}
+
               <button onClick={() => handleMessageClick(skill.teacherID)} className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Contact Instructor
