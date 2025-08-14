@@ -85,6 +85,53 @@ const SkillDetails = (onMessageClick) => {
     }
   };
 
+  // Check registration status for the current user
+  const checkRegistrationStatus = async (courseId) => {
+    if (!user) {
+      setRegistrationStatus("notRegistered");
+      return;
+    }
+
+    try {
+      setCheckingRegistration(true);
+      const token = getCookie("token");
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const apiUrl = buildApiUrl(API_ENDPOINTS.COURSES.CHECK);
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: headers,
+        credentials: "include",
+        body: JSON.stringify({
+          studentId: user._id,
+          courseId: courseId
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setRegistrationStatus(data.status);
+        } else {
+          setRegistrationStatus("notRegistered");
+        }
+      } else {
+        setRegistrationStatus("notRegistered");
+      }
+    } catch (error) {
+      console.error("Error checking registration status:", error);
+      setRegistrationStatus("notRegistered");
+    } finally {
+      setCheckingRegistration(false);
+    }
+  };
+
   // Fetch skill details from API
   useEffect(() => {
     const fetchSkillDetails = async () => {
@@ -148,6 +195,8 @@ const SkillDetails = (onMessageClick) => {
           setSkill(data.listing);
           // Fetch review stats for the listing
           fetchReviewStats(data.listing._id);
+          // Check registration status for the current user
+          checkRegistrationStatus(data.listing._id);
         } else {
           throw new Error(data.message || "Failed to fetch skill details");
         }
@@ -165,6 +214,15 @@ const SkillDetails = (onMessageClick) => {
       setError("No skill ID provided");
     }
   }, [id]);
+
+  // Check registration status when user state changes
+  useEffect(() => {
+    if (skill && user) {
+      checkRegistrationStatus(skill._id);
+    } else if (!user) {
+      setRegistrationStatus("notRegistered");
+    }
+  }, [user, skill]);
 
   // Loading state
   if (loading) {
