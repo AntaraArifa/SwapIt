@@ -196,6 +196,9 @@ const TeacherSessions = () => {
 
   const filteredSessions = getFilteredSessions();
   const groupedStudents = groupSessionsByStudent(filteredSessions);
+  
+  // Group all sessions (not filtered) for consistent progress calculation
+  const allGroupedStudents = groupSessionsByStudent(sessions);
 
   const tabs = [
     { id: "all", label: "All", count: sessions.length },
@@ -272,13 +275,17 @@ const TeacherSessions = () => {
         ) : (
           <div className="grid gap-6">
             {groupedStudents.map((group, index) => {
-              const progress = calculateProgress(group.sessions, group.course?.totalSessions);
+              // Find the corresponding group in all sessions for consistent progress
+              const allSessionsGroup = allGroupedStudents.find(g => 
+                g.student?._id === group.student?._id && g.course?._id === group.course?._id
+              );
+              const progress = calculateProgress(allSessionsGroup?.sessions || group.sessions, group.course?.totalSessions);
               const groupKey = `${group.student?._id}-${group.course?._id}`;
               
               return (
                 <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                   {/* Student Header */}
-                  <div className="bg-gray-900 border-b border-gray-700 flex items-stretch min-h-[100px]">
+                  <div className="bg-gray-900 border-b border-gray-700 flex items-stretch h-[100px]">
                     {/* Course Image - Full Height at Edge */}
                     <div className="relative group w-50 flex-shrink-0">
                       {group.course?.listingImgURL ? (
