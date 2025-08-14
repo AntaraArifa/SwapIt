@@ -56,7 +56,8 @@ const API_CONFIG = {
       CREATE: "/ratings/create",
     },
     REVIEW: {
-      CREATE: "/review/create",
+      CREATE: "/reviews/create",
+      STATS: (listingId) => `/reviews/average/${listingId}`,
     },
     // Courses (Registration)
     COURSES: {

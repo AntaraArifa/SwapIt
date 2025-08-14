@@ -34,6 +34,10 @@ const SkillDetails = (onMessageClick) => {
   const [chatVisible, setChatVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedInstructor, setSelectedInstructor] = useState(null);
+  const [reviewStats, setReviewStats] = useState({
+    averageRating: 0,
+    totalReviews: 0
+  });
   
 
   const getCookie = (name) => {
@@ -41,6 +45,44 @@ const SkillDetails = (onMessageClick) => {
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(";").shift();
     return null;
+  };
+
+  // Fetch review stats for a listing
+  const fetchReviewStats = async (listingId) => {
+    try {
+      const token = getCookie("token");
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const apiUrl = buildApiUrl(API_ENDPOINTS.REVIEW.STATS(listingId));
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: headers,
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setReviewStats({
+            averageRating: data.averageRating || 0,
+            totalReviews: data.totalReviews || 0
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching review stats:", error);
+      // Set default values if fetch fails
+      setReviewStats({
+        averageRating: 0,
+        totalReviews: 0
+      });
+    }
   };
 
   // Fetch skill details from API
@@ -283,6 +325,11 @@ const SkillDetails = (onMessageClick) => {
     setChatVisible(false);
     setSelectedStudent(null);
   };
+
+  const handleMessageClick = (receiver) => {
+    setSelectedInstructor(receiver);
+    setChatVisible(true);
+  };
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -344,19 +391,19 @@ const SkillDetails = (onMessageClick) => {
 
                   {/* Rating on bottom-right corner */}
                   <div className="flex items-center gap-1 ml-4">
-                    {reviewStats.averageRating > 0 ? (
+                    {reviewStats.averageRating && reviewStats.averageRating > 0 ? (
                       <>
                         <Star className="h-5 w-5 fill-yellow-400 text-yellow-400 drop-shadow-lg" />
                         <span className="font-semibold text-lg text-white drop-shadow-lg">
                           {reviewStats.averageRating.toFixed(1)}
                         </span>
                         <span className="text-white/80 drop-shadow-lg">
-                          (0 reviews)
+                          ({reviewStats.totalReviews} reviews)
                         </span>
                       </>
                     ) : (
                       <span className="text-white/80 drop-shadow-lg">
-                        No reviews yet
+                        {reviewStats.totalReviews > 0 ? `${reviewStats.totalReviews} reviews` : "No reviews yet"}
                       </span>
                     )}
                   </div>
