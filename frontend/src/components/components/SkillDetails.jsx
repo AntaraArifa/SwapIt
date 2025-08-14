@@ -694,9 +694,9 @@ const SkillDetails = (onMessageClick) => {
                 </div>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Course Duration</span>
+                <span className="text-gray-600">Total Sessions</span>
                 <span className="font-medium text-gray-900">
-                  {skill.duration || "Not specified"}
+                  {skill.totalSessions || "Not specified"}
                 </span>
               </div>
               <div className="flex justify-between">
