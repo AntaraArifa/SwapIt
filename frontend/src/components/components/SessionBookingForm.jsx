@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { buildApiUrl, API_ENDPOINTS } from "../../config/api";
 import { getSkillListingById } from "../../config/listings";
 import axios from "axios";
@@ -7,6 +7,7 @@ import axios from "axios";
 export default function SessionBookingForm() {
   const { skillId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const teacherID = location.state?.teacherID;
 
   const [form, setForm] = useState({
@@ -62,6 +63,11 @@ export default function SessionBookingForm() {
       setMessage("✅ Session request sent successfully!");
       setSuccess(true);
       setForm({ date: "", time: "", note: "" });
+      
+      // Navigate to skill details page after a short delay
+      setTimeout(() => {
+        navigate(`/skills/${skillId}`);
+      }, 2000);
     } catch (err) {
       const backendMessage =
         err?.response?.data?.message || "❌ Failed to send session request.";

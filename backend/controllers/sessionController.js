@@ -84,7 +84,7 @@ export const getUserSessions = async (req, res) => {
     const sessions = await Session.find(filter)
       .populate("teacherID", "fullname profile.profilePhoto")
       .populate("learnerID", "fullname profile.profilePhoto")
-      .populate("skillListingID", "title")
+      .populate("skillListingID", "title totalSessions listingImgURL proficiency")
       .sort({ createdAt: 1 });
 
     res.status(200).json({ message: "Sessions retrieved", success: true, sessions });
@@ -292,7 +292,7 @@ export const getLearnerSessions = async (req, res) => {
     const learnerID = req.user.userId;
     const sessions = await Session.find({ learnerID })
       .populate("teacherID", "fullname profile.profilePhoto")
-      .populate("skillListingID", "title")
+      .populate("skillListingID", "title totalSessions listingImgURL proficiency")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ message: "Learner sessions retrieved", success: true, sessions });
@@ -308,7 +308,7 @@ export const getTeacherSessions = async (req, res) => {
     const teacherID = req.user.userId;
     const sessions = await Session.find({ teacherID })
       .populate("learnerID", "fullname profile.profilePhoto")
-      .populate("skillListingID", "title")
+      .populate("skillListingID", "title totalSessions listingImgURL proficiency")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ message: "Teacher sessions retrieved", success: true, sessions });

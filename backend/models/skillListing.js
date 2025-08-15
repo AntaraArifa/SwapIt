@@ -25,8 +25,8 @@ const skillListingSchema = new mongoose.Schema({
         required: true, 
         min: 0 // fee cannot be negative
     },
-    duration: {
-        type: String,
+    totalSessions: {
+        type: Number,
         required: true
     },
     paymentMethods: [{

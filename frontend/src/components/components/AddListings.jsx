@@ -110,7 +110,7 @@ const AddListing = () => {
     listingImgURL: "",
     availableSlots: [],
     paymentMethods: [],
-    duration: "",
+    totalSessions: "",
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -334,12 +334,12 @@ const AddListing = () => {
       newErrors.description = "Description must be less than 5000 characters";
     }
 
-    if (!formData.duration.trim()) {
-      newErrors.duration = "Course duration is required";
-    } else if (formData.duration.trim().length < 2) {
-      newErrors.duration = "Duration must be at least 2 characters";
-    } else if (formData.duration.trim().length > 50) {
-      newErrors.duration = "Duration must be less than 50 characters";
+    if (!formData.totalSessions.trim()) {
+      newErrors.totalSessions = "Total sessions is required";
+    } else if (isNaN(formData.totalSessions) || parseInt(formData.totalSessions) <= 0) {
+      newErrors.totalSessions = "Total sessions must be a positive number";
+    } else if (parseInt(formData.totalSessions) > 100) {
+      newErrors.totalSessions = "Total sessions must be 100 or less";
     }
 
     if (!formData.skillID) {
@@ -402,7 +402,7 @@ const AddListing = () => {
           formData.title.trim() &&
           formData.description.trim() &&
           formData.description.trim().length >= 50 &&
-          formData.duration.trim()
+          formData.totalSessions.trim()
         );
       case 2:
         return (
@@ -445,7 +445,7 @@ const AddListing = () => {
         listingImgURL: formData.listingImgURL.trim(),
         availableSlots: formData.availableSlots,
         paymentMethods: formData.paymentMethods,
-        duration: formData.duration.trim(),
+        totalSessions: parseInt(formData.totalSessions),
       };
 
       // Get token from cookies
@@ -739,32 +739,34 @@ const AddListing = () => {
                   </div>
                 </div>
 
-                {/* Duration */}
+                {/* Total Sessions */}
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                     <Clock className="h-5 w-5 text-blue-600" />
-                    Course Duration *
+                    Total Sessions *
                   </label>
                   <input
-                    type="text"
-                    name="duration"
-                    value={formData.duration}
+                    type="number"
+                    name="totalSessions"
+                    value={formData.totalSessions}
                     onChange={handleInputChange}
-                    placeholder="e.g., 4 weeks, 2 months, 6 sessions"
+                    min="1"
+                    max="100"
+                    placeholder="e.g., 8"
                     className={`w-full px-4 py-4 border-2 rounded-xl text-lg transition-all duration-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 ${
-                      errors.duration
+                      errors.totalSessions
                         ? "border-red-500 bg-red-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   />
-                  {errors.duration && (
+                  {errors.totalSessions && (
                     <div className="flex items-center gap-2 text-red-600 text-sm">
                       <AlertCircle className="h-4 w-4" />
-                      {errors.duration}
+                      {errors.totalSessions}
                     </div>
                   )}
                   <p className="text-gray-500 text-sm">
-                    Specify how long your course will take to complete.
+                    Specify the total number of sessions your course will have.
                   </p>
                 </div>
               </div>

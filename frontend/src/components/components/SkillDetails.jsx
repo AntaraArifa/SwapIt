@@ -85,6 +85,53 @@ const SkillDetails = (onMessageClick) => {
     }
   };
 
+  // Check registration status for the current user
+  const checkRegistrationStatus = async (courseId) => {
+    if (!user) {
+      setRegistrationStatus("notRegistered");
+      return;
+    }
+
+    try {
+      setCheckingRegistration(true);
+      const token = getCookie("token");
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const apiUrl = buildApiUrl(API_ENDPOINTS.COURSES.CHECK);
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: headers,
+        credentials: "include",
+        body: JSON.stringify({
+          studentId: user._id,
+          courseId: courseId
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setRegistrationStatus(data.status);
+        } else {
+          setRegistrationStatus("notRegistered");
+        }
+      } else {
+        setRegistrationStatus("notRegistered");
+      }
+    } catch (error) {
+      console.error("Error checking registration status:", error);
+      setRegistrationStatus("notRegistered");
+    } finally {
+      setCheckingRegistration(false);
+    }
+  };
+
   // Fetch skill details from API
   useEffect(() => {
     const fetchSkillDetails = async () => {
@@ -148,6 +195,8 @@ const SkillDetails = (onMessageClick) => {
           setSkill(data.listing);
           // Fetch review stats for the listing
           fetchReviewStats(data.listing._id);
+          // Check registration status for the current user
+          checkRegistrationStatus(data.listing._id);
         } else {
           throw new Error(data.message || "Failed to fetch skill details");
         }
@@ -165,6 +214,15 @@ const SkillDetails = (onMessageClick) => {
       setError("No skill ID provided");
     }
   }, [id]);
+
+  // Check registration status when user state changes
+  useEffect(() => {
+    if (skill && user) {
+      checkRegistrationStatus(skill._id);
+    } else if (!user) {
+      setRegistrationStatus("notRegistered");
+    }
+  }, [user, skill]);
 
   // Loading state
   if (loading) {
@@ -599,6 +657,17 @@ const SkillDetails = (onMessageClick) => {
                 </>
               )}
 
+              {/* Course Feedback Button - Only show if course is completed */}
+              {registrationStatus === "completed" && (
+                <button 
+                  onClick={() => navigate(`/rating/${skill._id}`)} 
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-md transition-all duration-200 transform hover:scale-105"
+                >
+                  <Star className="h-4 w-4" />
+                  Share Course Feedback
+                </button>
+              )}
+
               <button onClick={() => handleMessageClick(skill.teacherID)} className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Contact Instructor
@@ -636,9 +705,9 @@ const SkillDetails = (onMessageClick) => {
                 </div>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Course Duration</span>
+                <span className="text-gray-600">Total Sessions</span>
                 <span className="font-medium text-gray-900">
-                  {skill.duration || "Not specified"}
+                  {skill.totalSessions || "Not specified"}
                 </span>
               </div>
               <div className="flex justify-between">
