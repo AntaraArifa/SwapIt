@@ -36,9 +36,8 @@ const SkillDetails = (onMessageClick) => {
   const [selectedInstructor, setSelectedInstructor] = useState(null);
   const [reviewStats, setReviewStats] = useState({
     averageRating: 0,
-    totalReviews: 0
+    totalReviews: 0,
   });
-  
 
   const getCookie = (name) => {
     const value = `; ${document.cookie}`;
@@ -46,7 +45,6 @@ const SkillDetails = (onMessageClick) => {
     if (parts.length === 2) return parts.pop().split(";").shift();
     return null;
   };
-  
 
   // Fetch review stats for a listing
   const fetchReviewStats = async (listingId) => {
@@ -72,7 +70,7 @@ const SkillDetails = (onMessageClick) => {
         if (data.success) {
           setReviewStats({
             averageRating: data.averageRating || 0,
-            totalReviews: data.totalReviews || 0
+            totalReviews: data.totalReviews || 0,
           });
         }
       }
@@ -81,7 +79,7 @@ const SkillDetails = (onMessageClick) => {
       // Set default values if fetch fails
       setReviewStats({
         averageRating: 0,
-        totalReviews: 0
+        totalReviews: 0,
       });
     }
   };
@@ -111,7 +109,7 @@ const SkillDetails = (onMessageClick) => {
         credentials: "include",
         body: JSON.stringify({
           studentId: user._id,
-          courseId: courseId
+          courseId: courseId,
         }),
       });
 
@@ -385,7 +383,7 @@ const SkillDetails = (onMessageClick) => {
     setSelectedStudent(null);
   };
 
-const handleMessageClick = async (receiver) => {
+  const handleMessageClick = async (receiver) => {
     try {
       const token = getCookie("token");
       const res = await axios.post(
@@ -465,7 +463,8 @@ const handleMessageClick = async (receiver) => {
 
                   {/* Rating on bottom-right corner */}
                   <div className="flex items-center gap-1 ml-4">
-                    {reviewStats.averageRating && reviewStats.averageRating > 0 ? (
+                    {reviewStats.averageRating &&
+                    reviewStats.averageRating > 0 ? (
                       <>
                         <Star className="h-5 w-5 fill-yellow-400 text-yellow-400 drop-shadow-lg" />
                         <span className="font-semibold text-lg text-white drop-shadow-lg">
@@ -477,7 +476,9 @@ const handleMessageClick = async (receiver) => {
                       </>
                     ) : (
                       <span className="text-white/80 drop-shadow-lg">
-                        {reviewStats.totalReviews > 0 ? `${reviewStats.totalReviews} reviews` : "No reviews yet"}
+                        {reviewStats.totalReviews > 0
+                          ? `${reviewStats.totalReviews} reviews`
+                          : "No reviews yet"}
                       </span>
                     )}
                   </div>
@@ -675,8 +676,8 @@ const handleMessageClick = async (receiver) => {
 
               {/* Course Feedback Button - Only show if course is completed */}
               {registrationStatus === "completed" && (
-                <button 
-                  onClick={() => navigate(`/rating/${skill._id}`)} 
+                <button
+                  onClick={() => navigate(`/rating/${skill._id}`)}
                   className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-md transition-all duration-200 transform hover:scale-105"
                 >
                   <Star className="h-4 w-4" />
@@ -684,10 +685,15 @@ const handleMessageClick = async (receiver) => {
                 </button>
               )}
 
-              <button onClick={() => handleMessageClick(skill.teacherID)} className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                Contact Instructor
-              </button>
+              {user && skill.teacherID._id !== user._id && (
+                <button
+                  onClick={() => onMessageClick(skill.teacherID)}
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 flex items-center justify-center gap-1"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Contact
+                </button>
+              )}
             </div>
           </div>
 

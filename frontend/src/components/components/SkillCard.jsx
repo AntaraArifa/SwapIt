@@ -3,11 +3,13 @@ import { Star, MessageCircle } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { useState } from "react";
 import ChatBox from "../pages/Chat/ChatBox";
+import { useSelector } from "react-redux";
 
 
 const SkillCard = ({ skill, onMessageClick }) => {
   const [chatVisible, setChatVisible] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState(null);
+   const { user } = useSelector((state) => state.auth);
 
   const getProficiencyColor = (proficiency) => {
     switch (proficiency.toLowerCase()) {
@@ -153,6 +155,7 @@ const SkillCard = ({ skill, onMessageClick }) => {
           >
             View Details
           </Link>
+          {user && user._id !== skill.teacherID._id && (
           <button
             onClick={() => onMessageClick(skill.teacherID)}
             className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 flex items-center justify-center gap-1"
@@ -160,6 +163,7 @@ const SkillCard = ({ skill, onMessageClick }) => {
             <MessageCircle className="h-4 w-4" />
             Contact
           </button>
+        )}
         </div>
       </div>
       <ChatBox
