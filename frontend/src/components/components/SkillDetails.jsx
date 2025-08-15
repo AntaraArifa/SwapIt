@@ -46,6 +46,7 @@ const SkillDetails = (onMessageClick) => {
     if (parts.length === 2) return parts.pop().split(";").shift();
     return null;
   };
+  
 
   // Fetch review stats for a listing
   const fetchReviewStats = async (listingId) => {
@@ -384,9 +385,24 @@ const SkillDetails = (onMessageClick) => {
     setSelectedStudent(null);
   };
 
-  const handleMessageClick = (receiver) => {
-    setSelectedInstructor(receiver);
-    setChatVisible(true);
+const handleMessageClick = async (receiver) => {
+    try {
+      const token = getCookie("token");
+      const res = await axios.post(
+        "http://localhost:3000/api/v1/chat/chat",
+        { userId: receiver._id },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        }
+      );
+
+      const chatId = res.data._id;
+      setSelectedStudent({ ...receiver, chatId });
+      setChatVisible(true);
+    } catch (err) {
+      console.error("Error opening chat", err);
+    }
   };
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
