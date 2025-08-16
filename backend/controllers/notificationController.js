@@ -14,6 +14,7 @@ export const sendSessionMeetingLink = async (req, res) => {
             message,
             meetingLink,
             isRead: false,
+            type: "meeting", 
         });
 
         await notification.save();

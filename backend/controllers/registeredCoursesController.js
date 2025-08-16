@@ -42,9 +42,10 @@ export const registerCourse = async (req, res) => {
         await Notification.create({
             recipient: course.teacherID._id,
             sender: studentId,
-            type: 'course_registration',
             message: `${student.fullname} has registered for your course "${course.title}".`,
-            isRead: false
+            isRead: false,
+            courseId: course._id, // Link to the course
+            type: 'course_registration',
         });
 
         // Populate the registered course with full details before returning
@@ -175,7 +176,10 @@ export const updateCourseRegistrationStatus = async (req, res) => {
         const notification = new Notification({
             recipient: registration.studentId._id,
             sender: teacherId,
-            message: `Your registration for "${registration.courseId.title}" has been approved by ${registration.courseId.teacherID.fullname}.`
+            message: `Your registration for "${registration.courseId.title}" has been approved by ${registration.courseId.teacherID.fullname}.`,
+            courseId: registration.courseId._id, // Link to the course
+            type: 'course_status',
+            
         });
         await notification.save();
 

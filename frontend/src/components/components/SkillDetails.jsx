@@ -686,12 +686,9 @@ const SkillDetails = (onMessageClick) => {
               )}
 
               {user && skill.teacherID._id !== user._id && (
-                <button
-                  onClick={() => onMessageClick(skill.teacherID)}
-                  className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 flex items-center justify-center gap-1"
-                >
+                 <button onClick={() => handleMessageClick(skill.teacherID)} className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
                   <MessageCircle className="h-4 w-4" />
-                  Contact
+                  Contact Instructor
                 </button>
               )}
             </div>

@@ -61,8 +61,8 @@ const sendMessage = expressAsyncHandler(async (req, res) => {
         recipient: recipient._id,
         sender: req.user.userId,
         message: `New message from ${message.sender.fullname}`,
-        type: "chat",
-        relatedChat: chat, // optional for linking
+        type: "message",
+        relatedChat: chat, 
       });
       await notification.save();
     }

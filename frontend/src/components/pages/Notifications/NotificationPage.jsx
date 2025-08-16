@@ -1,14 +1,78 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setNotifications } from "../../../redux/authSlice";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import ChatBox from "../Chat/ChatBox";
 
 const NotificationPage = () => {
   const notifications = useSelector((state) => state.auth.notifications);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const [chatVisible, setChatVisible] = useState(false);
+  const [chatData, setChatData] = useState(null);
+
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+    return null;
+  };
+
+  // Open chat with sender
+  const handleMessageClick = async (sender) => {
+    if (!sender?._id) return; // safeguard
+
+    try {
+      const token = getCookie("token");
+      const res = await axios.post(
+        "http://localhost:3000/api/v1/chat/chat",
+        { userId: sender._id },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        }
+      );
+
+      setChatData({
+        receiver: { ...sender, chatId: res.data._id },
+      });
+
+      setChatVisible(true);
+    } catch (err) {
+      console.error("Error opening chat", err);
+    }
+  };
+  const handleNotificationClick = (notif) => {
+    switch (notif.type) {
+      case "message":
+        if (notif.sender) handleMessageClick(notif.sender);
+        break;
+
+      case "course_status":
+        navigate(`/skills/${notif.courseId}`); // Example: open specific course
+        break;
+
+      case "course_registration":
+        navigate(`/skills/${notif.courseId}`); // Example: user’s registered courses
+        break;
+
+      case "book_session":
+        navigate("/sessions/teacher"); // Example: session details
+        break;
+
+      case "session_rescheduled":
+        navigate("/sessions/learner");
+        break;
+      case "session_status":
+        navigate("/sessions/learner");
+        break;
+
+      default:
+        console.log("Unknown notification type:", notif.type);
+    }
+  };
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
@@ -23,12 +87,11 @@ const NotificationPage = () => {
         console.error("Error fetching notifications:", error);
       }
     };
-
     fetchNotifications();
   }, [dispatch]);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8 relative">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
         All Notifications
       </h1>
@@ -42,9 +105,10 @@ const NotificationPage = () => {
           {notifications.map((notif) => (
             <li
               key={notif._id}
-              className="p-4 border rounded-lg shadow-sm bg-white flex items-start gap-4"
+              onClick={() => handleNotificationClick(notif)}
+              className="p-4 border rounded-lg shadow-sm bg-white flex items-start gap-4 cursor-pointer hover:bg-gray-50 transition"
             >
-              {/* Profile Picture or fallback */}
+              {/* Profile Picture */}
               {notif.sender?.profile?.profilePhoto ? (
                 <img
                   src={notif.sender.profile.profilePhoto}
@@ -65,12 +129,15 @@ const NotificationPage = () => {
                 <div className="text-xs text-gray-500 mt-1">
                   {new Date(notif.createdAt).toLocaleString()}
                 </div>
+
+                {/* Meeting link */}
                 {notif.meetingLink && (
                   <a
                     href={notif.meetingLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-block text-indigo-600 text-sm font-semibold hover:underline"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     Join Meeting
                   </a>
@@ -87,8 +154,16 @@ const NotificationPage = () => {
       >
         ← Back
       </button>
+
+      {/* Chat Box Popup */}
+      {chatVisible && chatData && (
+        <ChatBox
+          visible={chatVisible}
+          onClose={() => setChatVisible(false)}
+          receiver={chatData.receiver} // contains fullname + chatId now
+        />
+      )}
     </div>
   );
 };
-
 export default NotificationPage;

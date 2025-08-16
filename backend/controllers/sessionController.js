@@ -51,6 +51,8 @@ export const createSession = async (req, res) => {
       recipient: teacherID,
       sender: learnerID,
       message: `A session has been booked for "${skillListing.title}" on ${slotDate} at ${slotTime}.`,
+      sessionId: newSession._id, 
+      type: "book_session",
     });
 
     await notification.save();
@@ -132,9 +134,11 @@ export const updateSessionStatus = async (req, res) => {
     }
 
     const notification = new Notification({
-      recipient: session.learnerID, // assuming studentID field in Session
+      recipient: session.learnerID, 
       sender: userId,
       message: notifMessage,
+      sessionId: session._id, 
+      type: "session_status", 
     });
 
     await notification.save();
@@ -208,6 +212,8 @@ export const proposeReschedule = async (req, res) => {
       sender: userId,                  // Teacher is sender
       recipient: session.learnerID,   // Learner is recipient (check your field name)
       message: notificationMessage,
+      sessionId: session._id,
+      type: "session_rescheduled",    
     });
 
     await notification.save();

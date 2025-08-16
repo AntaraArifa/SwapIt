@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setUser, setNotifications } from "../../redux/authSlice";
 import { toast } from "sonner";
 import axios from "axios";
+import ChatBox from "../pages/Chat/ChatBox";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -28,6 +29,15 @@ const Navbar = () => {
     { name: "Home", href: "/" },
     { name: "Skills", href: "/skills" },
   ];
+  const [chatVisible, setChatVisible] = useState(false);
+  const [chatData, setChatData] = useState(null);
+
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+    return null;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -54,6 +64,58 @@ const Navbar = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+  const handleMessageClick = async (sender) => {
+    if (!sender?._id) return; // safeguard
+
+    try {
+      const token = getCookie("token");
+      const res = await axios.post(
+        "http://localhost:3000/api/v1/chat/chat",
+        { userId: sender._id },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        }
+      );
+
+      setChatData({
+        receiver: { ...sender, chatId: res.data._id },
+      });
+
+      setChatVisible(true);
+    } catch (err) {
+      console.error("Error opening chat", err);
+    }
+  };
+  const handleNotificationClick = (notif) => {
+    switch (notif.type) {
+      case "message":
+        if (notif.sender) handleMessageClick(notif.sender);
+        break;
+
+      case "course_status":
+        navigate(`/skills/${notif.courseId}`); // Example: open specific course
+        break;
+
+      case "course_registration":
+        navigate(`/skills/${notif.courseId}`); // Example: user’s registered courses
+        break;
+
+      case "book_session":
+        navigate("/sessions/teacher"); // Example: session details
+        break;
+
+      case "session_rescheduled":
+        navigate("/sessions/learner");
+        break;
+      case "session_status":
+        navigate("/sessions/learner");
+        break;
+
+      default:
+        console.log("Unknown notification type:", notif.type);
+    }
+  };
   useEffect(() => {
     let intervalId;
 
@@ -192,7 +254,8 @@ const Navbar = () => {
                           {notifications.slice(0, 5).map((notif) => (
                             <li
                               key={notif._id}
-                              className="p-4 space-y-0 flex items-start gap-3"
+                              onClick={() => handleNotificationClick(notif)}
+                              className="p-4 border rounded-lg shadow-sm bg-white flex items-start gap-4 cursor-pointer hover:bg-gray-50 transition"
                             >
                               {notif.sender?.profile?.profilePhoto ? (
                                 <img
@@ -353,6 +416,13 @@ const Navbar = () => {
             </Link>
           )}
         </div>
+      )}
+      {chatVisible && chatData && (
+        <ChatBox
+          visible={chatVisible}
+          onClose={() => setChatVisible(false)}
+          receiver={chatData.receiver} // contains fullname + chatId now
+        />
       )}
     </nav>
   );
