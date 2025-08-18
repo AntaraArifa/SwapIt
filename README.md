@@ -69,10 +69,10 @@ git clone https://github.com/your-username/SwapIT.git
 cd SwapIT
 
 # For backend
-cd server
+cd backend
 npm install
 
 # For frontend
-cd ../client
+cd frontend
 npm install
 
