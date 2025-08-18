@@ -63,6 +63,7 @@ const API_CONFIG = {
     COURSES: {
       CHECK: "/courses/check",
       REGISTER: "/courses/register",
+      BY_STUDENT: (studentId) => `/courses/student/${studentId}`,
     },
   },
 }

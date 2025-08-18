@@ -13,6 +13,9 @@ router.post('/check', isAuthenticated, registeredCoursesController.checkCourseSt
 // Get all students registered for a course
 router.post('/students/:courseId', isAuthenticated, registeredCoursesController.getStudentsRegisteredForCourse);
 
+// Get all courses registered by a student
+router.get('/student/:studentId', isAuthenticated, registeredCoursesController.getRegisteredCoursesByStudentId);
+
 // Update course registration status
 router.post('/status/update', isAuthenticated, registeredCoursesController.updateCourseRegistrationStatus);
 
