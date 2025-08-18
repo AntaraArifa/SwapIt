@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { setUser } from '../../../redux/authSlice';
-import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit3, Star, MessageSquare } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Camera, Save, Edit3, Star, MessageSquare, Plus } from 'lucide-react';
 import { buildApiUrl, API_ENDPOINTS } from '../../../config/api';
 
 const Profile = () => {
@@ -22,6 +22,8 @@ const Profile = () => {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [averageRating, setAverageRating] = useState(null);
   const [loadingRating, setLoadingRating] = useState(false);
+  const [userSkills, setUserSkills] = useState([]);
+  const [loadingSkills, setLoadingSkills] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -36,9 +38,38 @@ const Profile = () => {
       // Fetch average rating if user is a teacher
       if (user.role === 'teacher') {
         fetchAverageRating();
+        fetchUserSkills(); // Fetch detailed skills for teachers
       }
     }
   }, [user]);
+  
+  // Fetch detailed skills from the skills collection
+  const fetchUserSkills = async () => {
+    if (!user) return;
+    
+    setLoadingSkills(true);
+    try {
+      const response = await fetch(buildApiUrl(`/skills/user/${user._id}`), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setUserSkills(data.skills);
+      }
+    } catch (error) {
+      console.error('Error fetching user skills:', error);
+    } finally {
+      setLoadingSkills(false);
+    }
+  };
 
   const fetchAverageRating = async () => {
     if (!user || user.role !== 'teacher') return;
@@ -99,6 +130,13 @@ const Profile = () => {
       data.append('email', formData.email);
       data.append('phoneNumber', formData.phoneNumber);
       data.append('bio', formData.bio);
+      
+      // Process skills from comma-separated string to array
+      if (formData.skills) {
+        const skillsArray = formData.skills.split(',').map(skill => skill.trim()).filter(skill => skill);
+        data.append('skills', JSON.stringify(skillsArray));
+      }
+      
       if (profilePhoto) data.append('profilePhoto', profilePhoto);
 
       const res = await fetch(buildApiUrl(API_ENDPOINTS.USER.UPDATE), {
@@ -208,6 +246,15 @@ const Profile = () => {
                 My Reviews
               </button>
             )}
+            
+            {/* Add Skill Button */}
+            <button
+              onClick={() => navigate('/skills/add')}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+            >
+              <Plus size={16} />
+              Add Skill
+            </button>
             
             {/* Edit Profile Button */}
             {!isEditing ? (
@@ -342,27 +389,77 @@ const Profile = () => {
               )}
             </div>
 
-            {/* <div className="col-span-2">
-              <label className="text-sm text-gray-600">Skills</label>
+            <div className="col-span-2">
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-700">Skills & Expertise</label>
+              </div>
               {isEditing ? (
-                <input
-                  type="text"
-                  name="skills"
-                  value={formData.skills}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded mt-1"
-                  placeholder="React, Node.js, MongoDB"
-                />
+                <div>
+                  <input
+                    type="text"
+                    name="skills"
+                    value={formData.skills}
+                    onChange={handleInputChange}
+                    className="w-full border px-3 py-2 rounded mt-1"
+                    placeholder="React, Node.js, MongoDB (comma-separated)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter skills separated by commas</p>
+                </div>
               ) : (
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {user.profile?.skills?.map((skill, i) => (
-                    <span key={i} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm">
-                      {skill}
-                    </span>
-                  ))}
+                <div className="mt-2">
+                  {loadingSkills ? (
+                    <p className="text-gray-500">Loading skills...</p>
+                  ) : userSkills.length > 0 ? (
+                    <div className="space-y-3">
+                      {userSkills.map((skill) => (
+                        <div key={skill._id} className="bg-white border rounded-lg p-3 shadow-sm">
+                          <div className="flex justify-between items-center">
+                            <h3 className="font-medium text-indigo-700">{skill.name}</h3>
+                            <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full text-xs">
+                              {skill.level}
+                            </span>
+                          </div>
+                          {skill.category && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              Category: {skill.category}
+                            </div>
+                          )}
+                          {skill.description && (
+                            <p className="text-sm text-gray-600 mt-2">{skill.description}</p>
+                          )}
+                          {skill.tags && skill.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {skill.tags.map((tag, i) => (
+                                <span key={i} className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {skill.experience > 0 && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              Experience: {skill.experience} {skill.experience === 1 ? 'year' : 'years'}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : user.profile?.skills?.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {user.profile.skills.map((skill, i) => (
+                        <span key={i} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <p className="text-gray-500">No skills added yet. Click "Edit" to add your skills or use the "Add Skill" button.</p>
+                    </div>
+                  )}
                 </div>
               )}
-            </div> */}
+            </div>
 
             <div className="col-span-2 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between">

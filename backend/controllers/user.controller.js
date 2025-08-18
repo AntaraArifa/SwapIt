@@ -135,6 +135,16 @@ export const updateProfile = async (req, res) => {
     if (email) user.email = email;
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (bio) user.profile.bio = bio;
+    
+    // Handle skills update
+    if (req.body.skills) {
+      try {
+        const skillsArray = JSON.parse(req.body.skills);
+        user.profile.skills = skillsArray;
+      } catch (e) {
+        console.error('Error parsing skills:', e);
+      }
+    }
 
     if (resume) {
       const fileUri = getDataUri(resume);
