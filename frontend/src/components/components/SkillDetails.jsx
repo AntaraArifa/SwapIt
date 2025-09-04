@@ -163,43 +163,66 @@ const SkillDetails = (onMessageClick) => {
     }
   };
 
+  // Check session status for skillListingID
+  const checkSkillListingStatus = async (skillListingID) => {
+    if (!user || !skillListingID) {
+      setSessionStatus(null);
+      return;
+    }
+    try {
+      setCheckingSessionStatus(true);
+      const token = getCookie("token");
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const apiUrl = `/api/v1/sessions/${skillListingID}/status`;
+      console.log('Calling session status API:', apiUrl);
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers,
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('API response:', data);
+        setSessionStatus(data.status || null);
+      } else {
+        setSessionStatus(null);
+      }
+    } catch (err) {
+      console.error('Error fetching session status:', err);
+      setSessionStatus(null);
+    } finally {
+      setCheckingSessionStatus(false);
+    }
+  };
+
   // Fetch skill details from API
   useEffect(() => {
     const fetchSkillDetails = async () => {
       try {
         setLoading(true);
-
-        // Get token from cookies
+        // ...existing code...
         const getCookie = (name) => {
           const value = `; ${document.cookie}`;
           const parts = value.split(`; ${name}=`);
           if (parts.length === 2) return parts.pop().split(";").shift();
           return null;
         };
-
         const token = getCookie("token");
-
         const headers = {
           "Content-Type": "application/json",
         };
-
-        // Add authorization header if token exists
         if (token) {
           headers["Authorization"] = `Bearer ${token}`;
         }
-
         const apiUrl = buildApiUrl(API_ENDPOINTS.LISTINGS.BY_ID(id));
-
         const response = await fetch(apiUrl, {
           method: "GET",
           headers: headers,
           credentials: "include",
         });
-
         if (!response.ok) {
-          // Try to get the error message from the response
           const errorData = await response.json().catch(() => ({}));
-
           if (response.status === 401) {
             throw new Error(
               "Authentication required. Please sign in to view skill details."
@@ -219,17 +242,12 @@ const SkillDetails = (onMessageClick) => {
             throw new Error(errorMessage);
           }
         }
-
         const data = await response.json();
-
         if (data.success) {
           setSkill(data.listing);
-          // Fetch review stats for the listing
           fetchReviewStats(data.listing._id);
-          // Check registration status for the current user
           checkRegistrationStatus(data.listing._id);
-          // Check session status
-          checkSessionStatus(data.listing.sessionId);
+          // Do NOT call checkSessionStatus here
         } else {
           throw new Error(data.message || "Failed to fetch skill details");
         }
@@ -258,13 +276,16 @@ const SkillDetails = (onMessageClick) => {
   }, [user, skill]);
 
   // Check session status when skill or user changes
+  // Removed conflicting useEffect that overwrites sessionStatus
+
+  // Check session status for skillListingID when id or user changes
   useEffect(() => {
-    if (skill && skill.sessionId) {
-      checkSessionStatus(skill.sessionId);
+    if (id && user) {
+      checkSkillListingStatus(id);
     } else {
       setSessionStatus(null);
     }
-  }, [skill, user]);
+  }, [id, user]);
 
   // Loading state
   if (loading) {
@@ -649,6 +670,8 @@ const SkillDetails = (onMessageClick) => {
               </span>
             </div>
             <div className="space-y-3">
+              {/* Debug log for sessionStatus */}
+              {/* Remove debug UI for production, but keep for troubleshooting if needed */}
               {/* Check if current user is the listing owner */}
               {user && skill.teacherID._id === user._id ? (
                 <button
