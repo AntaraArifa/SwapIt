@@ -17,14 +17,12 @@ const RatingReviewPage = () => {
   const teacherID = location.state?.teacherID || sessionData?.teacherID?._id || sessionData?.teacherID
   const learnerID = location.state?.learnerID || sessionData?.learnerID?._id || sessionData?.learnerID || user?._id
 
-  const [currentStep, setCurrentStep] = useState(1) // 1 = course completion check, 2 = rating, 3 = review
+  const [currentStep, setCurrentStep] = useState(2) // Start at rating step
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [reviewText, setReviewText] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submittedRating, setSubmittedRating] = useState(null)
-  const [courseCompletion, setCourseCompletion] = useState(null)
-  const [completionLoading, setCompletionLoading] = useState(true)
 
   // Check authentication and course completion on mount
   useEffect(() => {
@@ -51,51 +49,11 @@ const RatingReviewPage = () => {
       return
     }
 
-    // Check course completion status first
-    checkCourseCompletion()
+  // No API fetch for course completion; show rating page directly
   }, [user, skillListingID, navigate, location.state])
 
   const checkCourseCompletion = async () => {
-    if (!user || !skillListingID || !teacherID) return;
-
-    try {
-      setCompletionLoading(true);
-      
-      const response = await fetch(
-        `http://localhost:3000/api/v1/ratings/course-completion/${user._id}/${teacherID}/${skillListingID}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setCourseCompletion(data.courseCompletion);
-        
-        // If course is not completed, show error and redirect
-        if (!data.courseCompletion.isCompleted) {
-          toast.error(`You can only rate this course after completing all sessions. You have completed ${data.courseCompletion.completedSessions} out of ${data.courseCompletion.totalSessions} sessions.`);
-          navigate("/sessions/learner");
-          return;
-        }
-        
-        // If course is completed, proceed to check existing rating
-        checkExistingRating();
-      } else {
-        toast.error(data.message || 'Failed to check course completion');
-        navigate("/sessions/learner");
-      }
-    } catch (error) {
-      console.error('Error checking course completion:', error);
-      toast.error('Failed to check course completion status');
-      navigate("/sessions/learner");
-    } finally {
-      setCompletionLoading(false);
-    }
+  // Removed course completion API fetch
   };
 
   const checkExistingRating = async () => {
@@ -187,7 +145,7 @@ const RatingReviewPage = () => {
       return
     }
 
-    if (!teacherID || !learnerID) {
+    if (!learnerID) {
       toast.error("Missing required information")
       return
     }
@@ -209,7 +167,6 @@ const RatingReviewPage = () => {
         },
         body: JSON.stringify({
           learnerID: learnerID,
-          teacherID: teacherID,
           listingID: skillListingID,
           rating: rating,
         }),
@@ -294,19 +251,6 @@ const RatingReviewPage = () => {
     return null // Will redirect to login
   }
 
-  if (completionLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 py-8">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Checking course completion...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 py-8">
       <div className="max-w-2xl mx-auto px-4">
@@ -329,42 +273,6 @@ const RatingReviewPage = () => {
             </p>
           </div>
         </div>
-
-        {/* Course Completion Check Step */}
-        {currentStep === 1 && courseCompletion && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="text-center mb-6">
-              <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                Course Completed Successfully!
-              </h2>
-              <p className="text-gray-600">
-                You have completed all {courseCompletion.totalSessions} sessions. 
-                You can now rate and review this course.
-              </p>
-            </div>
-
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center gap-2 text-green-700 mb-2">
-                <CheckCircle size={20} />
-                <span className="font-medium">Course Progress</span>
-              </div>
-              <div className="w-full bg-green-200 rounded-full h-2 mb-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '100%' }}></div>
-              </div>
-              <p className="text-green-600 text-sm">
-                {courseCompletion.completedSessions}/{courseCompletion.totalSessions} sessions completed
-              </p>
-            </div>
-
-            <button
-              onClick={() => setCurrentStep(2)}
-              className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-semibold transition-colors"
-            >
-              Continue to Rating
-            </button>
-          </div>
-        )}
 
         {/* Rating Step */}
         {currentStep === 2 && (

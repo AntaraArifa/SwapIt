@@ -10,5 +10,6 @@ router.get("/teacher", isAuthenticated, sessionController.getTeacherSessions);
 router.patch("/:sessionId/status", isAuthenticated, sessionController.updateSessionStatus);
 router.patch("/:sessionId/propose-reschedule", isAuthenticated, sessionController.proposeReschedule);
 router.patch("/:sessionId/respond-reschedule", isAuthenticated, sessionController.respondReschedule);
+router.get("/:skillListingID/status", isAuthenticated, sessionController.getSessionStatus);
 
 export default router;
