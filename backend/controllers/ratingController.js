@@ -6,10 +6,10 @@ import RegisteredCourse from "../models/registeredCourses.js"; // Added for regi
 
 export const createRating = async (req, res) => {
     try {
-        const { learnerID, teacherID, listingID, rating } = req.body;
+    const { learnerID, listingID, rating } = req.body;
 
         // Validate required fields
-        if (!learnerID || !teacherID || !listingID || !rating) {
+        if (!learnerID || !listingID || !rating) {
             return res.status(400).json({
                 message: "All fields are required",
                 success: false
@@ -33,14 +33,7 @@ export const createRating = async (req, res) => {
             });
         }
 
-        // Check if teacher exists
-        const teacher = await User.findById(teacherID);
-        if (!teacher) {
-            return res.status(404).json({
-                message: "Teacher not found",
-                success: false
-            });
-        }
+    // Removed teacher check
 
         // Check if listing exists
         const listing = await SkillListing.findById(listingID);
@@ -75,10 +68,9 @@ export const createRating = async (req, res) => {
 
         // (Legacy session-based restriction removed per new requirement)
 
-        // Check if learner has already rated this listing by this teacher
+        // Check if learner has already rated this listing
         const existingRating = await Rating.findOne({
             learnerID,
-            teacherID,
             listingID
         });
 
@@ -92,7 +84,6 @@ export const createRating = async (req, res) => {
         // Create new rating
         const newRating = new Rating({
             learnerID,
-            teacherID,
             listingID,
             rating
         });
@@ -115,7 +106,6 @@ export const createRating = async (req, res) => {
         // Populate the rating with related data
         const populatedRating = await Rating.findById(newRating._id)
             .populate('learnerID', 'fullname email')
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title');
 
         return res.status(201).json({
@@ -274,7 +264,6 @@ export const getRatingsByListing = async (req, res) => {
         // Find all ratings for the listing
         const ratings = await Rating.find({ listingID: listingId })
             .populate('learnerID', 'fullname email')
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title')
             .sort({ createdAt: -1 }); // Sort by newest first
 
@@ -359,7 +348,6 @@ export const getMyRatings = async (req, res) => {
 
         // Get all ratings by this user
         const ratings = await Rating.find({ learnerID: userId })
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title description fee')
             .sort({ createdAt: -1 });
 
@@ -419,7 +407,6 @@ export const getRatingsByUserId = async (req, res) => {
 
         // Get all ratings by this specific user
         const ratings = await Rating.find({ learnerID: userId })
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title description fee')
             .sort({ createdAt: -1 });
 
@@ -487,7 +474,6 @@ export const getRatingsByLearnerId = async (req, res) => {
 
         // Get all ratings given BY this specific learner
         const ratings = await Rating.find({ learnerID: learnerId })
-            .populate('teacherID', 'fullname email profilePicture')
             .populate('listingID', 'title description fee category')
             .sort({ createdAt: -1 });
 
@@ -522,17 +508,12 @@ export const getMyReceivedRatings = async (req, res) => {
 
         console.log("Getting ratings received by current user as teacher:", userId);
 
-        // Get all ratings received BY the current user (when they were a teacher)
-        const ratings = await Rating.find({ teacherID: userId })
-            .populate('learnerID', 'fullname email profilePicture')
-            .populate('listingID', 'title description fee category')
-            .sort({ createdAt: -1 });
-
-        return res.status(200).json({
-            message: "Ratings you received as a teacher retrieved successfully",
-            success: true,
-            ratings,
-            totalRatings: ratings.length
+        // This function is now deprecated since teacherID is removed
+        return res.status(410).json({
+            message: "Ratings by teacher are no longer tracked.",
+            success: false,
+            ratings: [],
+            totalRatings: 0
         });
 
     } catch (error) {
@@ -570,99 +551,14 @@ export const getAverageRatingsByTeacherId = async (req, res) => {
             });
         }
 
-        // Check if teacher exists
-        console.log("Looking for teacher with ID:", teacherId);
-        const teacher = await User.findById(teacherId);
-        if (!teacher) {
-            console.log("Teacher not found in database");
-            return res.status(404).json({
-                message: "Teacher not found",
-                success: false
-            });
-        }
-
-        // Verify the user is actually a teacher
-        if (teacher.role !== 'teacher') {
-            return res.status(400).json({
-                message: "This user is not a teacher",
-                success: false
-            });
-        }
-
-        console.log("Teacher found:", teacher.fullname);
-
-        // Get all ratings received by this teacher
-        const ratings = await Rating.find({ teacherID: teacherId })
-            .populate('learnerID', 'fullname email')
-            .populate('listingID', 'title description fee')
-            .sort({ createdAt: -1 });
-
-        console.log("Found ratings for teacher:", ratings.length);
-
-        // Check if there are any ratings
-        if (ratings.length === 0) {
-            return res.status(200).json({
-                message: `${teacher.fullname} has not received any ratings yet`,
-                success: true,
-                averageRating: null,
-                totalRatings: 0,
-                ratings: [],
-                teacher: {
-                    id: teacher._id,
-                    fullname: teacher.fullname,
-                    email: teacher.email
-                },
-                note: "This teacher hasn't received any ratings yet"
-            });
-        }
-
-        // Calculate average rating
-        const totalRating = ratings.reduce((sum, rating) => sum + rating.rating, 0);
-        const averageRating = parseFloat((totalRating / ratings.length).toFixed(1));
-
-        // Calculate rating distribution
-        const ratingDistribution = {
-            1: ratings.filter(r => r.rating === 1).length,
-            2: ratings.filter(r => r.rating === 2).length,
-            3: ratings.filter(r => r.rating === 3).length,
-            4: ratings.filter(r => r.rating === 4).length,
-            5: ratings.filter(r => r.rating === 5).length
-        };
-
-        // Get unique skills taught (from listings)
-        const uniqueSkills = [...new Set(ratings.map(r => r.listingID?._id?.toString()))];
-        
-        // Get recent ratings (last 5)
-        const recentRatings = ratings.slice(0, 5);
-
-        console.log("Calculated average rating:", averageRating);
-
-        return res.status(200).json({
-            message: `Average ratings for ${teacher.fullname} retrieved successfully`,
-            success: true,
-            averageRating,
-            totalRatings: ratings.length,
-            teacher: {
-                id: teacher._id,
-                fullname: teacher.fullname,
-                email: teacher.email,
-                role: teacher.role
-            },
-            ratingDistribution,
-            uniqueSkillsCount: uniqueSkills.length,
-            recentRatings: recentRatings.map(rating => ({
-                _id: rating._id,
-                rating: rating.rating,
-                learner: rating.learnerID?.fullname,
-                skill: rating.listingID?.title,
-                createdAt: rating.createdAt
-            })),
-            statistics: {
-                highestRating: Math.max(...ratings.map(r => r.rating)),
-                lowestRating: Math.min(...ratings.map(r => r.rating)),
-                ratingsAbove4: ratings.filter(r => r.rating >= 4).length,
-                ratingsBelow3: ratings.filter(r => r.rating <= 2).length
-            }
+        // This function is now deprecated since teacherID is removed
+        return res.status(410).json({
+            message: "Average ratings by teacher are no longer tracked.",
+            success: false,
+            averageRating: null,
+            totalRatings: 0,
+            ratings: [],
+            note: "Teacher-based ratings are deprecated. Use listing-based ratings."
         });
 
     } catch (error) {
