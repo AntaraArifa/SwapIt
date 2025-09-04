@@ -1,7 +1,8 @@
 import { User } from "../models/user.model.js";
 import Rating from "../models/rating.js";
 import SkillListing from "../models/skillListing.js";
-import Session from "../models/session.js";
+import Session from "../models/session.js"; // (Legacy session completion logic – retained for now)
+import RegisteredCourse from "../models/registeredCourses.js"; // Added for registration status validation
 
 export const createRating = async (req, res) => {
     try {
@@ -50,31 +51,29 @@ export const createRating = async (req, res) => {
             });
         }
 
-        // Check if the learner has completed ALL sessions for this listing
-        const allSessionsForListing = await Session.find({
-            learnerID: learnerID,
-            teacherID: teacherID,
-            skillListingID: listingID
+        // NEW REQUIREMENT: Only allow rating if registered course status is completed
+        const registration = await RegisteredCourse.findOne({
+            studentId: learnerID,
+            courseId: listingID
         });
 
-        if (allSessionsForListing.length === 0) {
+        if (!registration) {
             return res.status(403).json({
-                message: "You must book at least one session for this course before rating it",
+                message: "You must register for this course before rating it",
                 success: false
             });
         }
 
-        const completedSessions = allSessionsForListing.filter(session => session.status === "completed");
-        const totalSessions = allSessionsForListing.length;
-
-        if (completedSessions.length < totalSessions) {
+        const regStatus = registration.status || registration.courseStatus; // Support both fields
+        if (regStatus !== 'completed') {
             return res.status(403).json({
-                message: `You can only rate this course after completing all sessions. You have completed ${completedSessions.length} out of ${totalSessions} sessions.`,
+                message: `You can rate this course only after its registration status is completed. Current status: ${regStatus}`,
                 success: false,
-                completedSessions: completedSessions.length,
-                totalSessions: totalSessions
+                registrationStatus: regStatus
             });
         }
+
+        // (Legacy session-based restriction removed per new requirement)
 
         // Check if learner has already rated this listing by this teacher
         const existingRating = await Rating.findOne({

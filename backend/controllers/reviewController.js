@@ -1,7 +1,8 @@
 import { User } from "../models/user.model.js";
 import Review from "../models/review.js";
 import SkillListing from "../models/skillListing.js";
-import Session from "../models/session.js";
+import Session from "../models/session.js"; // (Legacy session logic retained)
+import RegisteredCourse from "../models/registeredCourses.js"; // Added for registration status validation
 
 // Create Review Function
 export const createReview = async (req, res) => {
@@ -59,31 +60,29 @@ export const createReview = async (req, res) => {
             });
         }
 
-        // Check if the learner has completed ALL sessions for this listing
-        const allSessionsForListing = await Session.find({
-            learnerID: learnerID,
-            teacherID: teacherID,
-            skillListingID: listingID
+        // NEW REQUIREMENT: Only allow review if registered course status is completed
+        const registration = await RegisteredCourse.findOne({
+            studentId: learnerID,
+            courseId: listingID
         });
 
-        if (allSessionsForListing.length === 0) {
+        if (!registration) {
             return res.status(403).json({
-                message: "You must book at least one session for this course before reviewing it",
+                message: "You must register for this course before reviewing it",
                 success: false
             });
         }
 
-        const completedSessions = allSessionsForListing.filter(session => session.status === "completed");
-        const totalSessions = allSessionsForListing.length;
-
-        if (completedSessions.length < totalSessions) {
+        const regStatus = registration.status || registration.courseStatus;
+        if (regStatus !== 'completed') {
             return res.status(403).json({
-                message: `You can only review this course after completing all sessions. You have completed ${completedSessions.length} out of ${totalSessions} sessions.`,
+                message: `You can review this course only after its registration status is completed. Current status: ${regStatus}`,
                 success: false,
-                completedSessions: completedSessions.length,
-                totalSessions: totalSessions
+                registrationStatus: regStatus
             });
         }
+
+        // (Legacy session completion requirement removed per new rule)
 
         // Check if learner has already reviewed this listing by this teacher
         console.log("=== Checking for existing review ===");
