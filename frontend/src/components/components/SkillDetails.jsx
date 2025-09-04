@@ -38,6 +38,8 @@ const SkillDetails = (onMessageClick) => {
     averageRating: 0,
     totalReviews: 0,
   });
+  const [sessionStatus, setSessionStatus] = useState(null);
+  const [checkingSessionStatus, setCheckingSessionStatus] = useState(false);
 
   const getCookie = (name) => {
     const value = `; ${document.cookie}`;
@@ -131,6 +133,36 @@ const SkillDetails = (onMessageClick) => {
     }
   };
 
+  // Check session status
+  const checkSessionStatus = async (sessionId) => {
+    if (!user || !sessionId) {
+      setSessionStatus(null);
+      return;
+    }
+    try {
+      setCheckingSessionStatus(true);
+      const token = getCookie("token");
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const apiUrl = `/api/v1/sessions/${sessionId}/status`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers,
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSessionStatus(data.status || null);
+      } else {
+        setSessionStatus(null);
+      }
+    } catch {
+      setSessionStatus(null);
+    } finally {
+      setCheckingSessionStatus(false);
+    }
+  };
+
   // Fetch skill details from API
   useEffect(() => {
     const fetchSkillDetails = async () => {
@@ -196,6 +228,8 @@ const SkillDetails = (onMessageClick) => {
           fetchReviewStats(data.listing._id);
           // Check registration status for the current user
           checkRegistrationStatus(data.listing._id);
+          // Check session status
+          checkSessionStatus(data.listing.sessionId);
         } else {
           throw new Error(data.message || "Failed to fetch skill details");
         }
@@ -222,6 +256,15 @@ const SkillDetails = (onMessageClick) => {
       setRegistrationStatus("notRegistered");
     }
   }, [user, skill]);
+
+  // Check session status when skill or user changes
+  useEffect(() => {
+    if (skill && skill.sessionId) {
+      checkSessionStatus(skill.sessionId);
+    } else {
+      setSessionStatus(null);
+    }
+  }, [skill, user]);
 
   // Loading state
   if (loading) {
@@ -675,7 +718,7 @@ const SkillDetails = (onMessageClick) => {
               )}
 
               {/* Course Feedback Button - Only show if course is completed */}
-              {registrationStatus === "completed" && (
+              {sessionStatus === "completed" && (
                 <button
                   onClick={() => navigate(`/rating/${skill._id}`)}
                   className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-md transition-all duration-200 transform hover:scale-105"

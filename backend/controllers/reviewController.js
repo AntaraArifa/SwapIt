@@ -7,10 +7,10 @@ import RegisteredCourse from "../models/registeredCourses.js"; // Added for regi
 // Create Review Function
 export const createReview = async (req, res) => {
     try {
-        const { learnerID, teacherID, listingID, reviewText, rating } = req.body;
+    const { learnerID, listingID, reviewText, rating } = req.body;
 
         // Validate required fields
-        if (!learnerID || !teacherID || !listingID || !reviewText || !rating) {
+        if (!learnerID || !listingID || !reviewText || !rating) {
             return res.status(400).json({
                 message: "All fields are required",
                 success: false
@@ -42,14 +42,7 @@ export const createReview = async (req, res) => {
             });
         }
 
-        // Check if teacher exists
-        const teacher = await User.findById(teacherID);
-        if (!teacher) {
-            return res.status(404).json({
-                message: "Teacher not found",
-                success: false
-            });
-        }
+    // Removed teacher check
 
         // Check if listing exists
         const listing = await SkillListing.findById(listingID);
@@ -84,25 +77,11 @@ export const createReview = async (req, res) => {
 
         // (Legacy session completion requirement removed per new rule)
 
-        // Check if learner has already reviewed this listing by this teacher
-        console.log("=== Checking for existing review ===");
-        console.log("LearnerID:", learnerID);
-        console.log("TeacherID:", teacherID);
-        console.log("ListingID:", listingID);
-        
+        // Check if learner has already reviewed this listing
         const existingReview = await Review.findOne({
             learnerID,
-            teacherID,
             listingID
         });
-        
-        console.log("Existing review found:", existingReview ? "YES" : "NO");
-        if (existingReview) {
-            console.log("Existing review ID:", existingReview._id);
-            console.log("Existing review learner:", existingReview.learnerID);
-            console.log("Existing review teacher:", existingReview.teacherID);
-            console.log("Existing review listing:", existingReview.listingID);
-        }
 
         if (existingReview) {
             return res.status(400).json({
@@ -115,7 +94,6 @@ export const createReview = async (req, res) => {
         // Create new review
         const newReview = new Review({
             learnerID,
-            teacherID,
             listingID,
             reviewText,
             rating
@@ -126,7 +104,6 @@ export const createReview = async (req, res) => {
         // Populate the review with related data
         const populatedReview = await Review.findById(newReview._id)
             .populate('learnerID', 'fullname email')
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title');
 
         return res.status(201).json({
@@ -200,7 +177,6 @@ export const updateReview = async (req, res) => {
         // Populate the updated review with related data
         const populatedReview = await Review.findById(existingReview._id)
             .populate('learnerID', 'fullname email')
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title');
 
         return res.status(200).json({
@@ -266,7 +242,6 @@ export const deleteReview = async (req, res) => {
             deletedReview: {
                 _id: review._id,
                 learnerID: review.learnerID,
-                teacherID: review.teacherID,
                 listingID: review.listingID,
                 reviewText: review.reviewText,
                 rating: review.rating,
@@ -300,7 +275,6 @@ export const getReviewById = async (req, res) => {
         // Find the review and populate related data
         const review = await Review.findById(id)
             .populate('learnerID', 'fullname email')
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title');
 
         if (!review) {
@@ -341,7 +315,6 @@ export const getReviewsByListing = async (req, res) => {
         // Find all reviews for the listing
         const reviews = await Review.find({ listingID: listingId })
             .populate('learnerID', 'fullname email profile')
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title')
             .sort({ createdAt: -1 }); // Sort by newest first
 
@@ -424,7 +397,6 @@ export const getMyReviews = async (req, res) => {
 
         // Get all reviews by this user
         const reviews = await Review.find({ learnerID: userId })
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title description fee')
             .sort({ createdAt: -1 });
 
@@ -451,19 +423,12 @@ export const getMyReceivedReviews = async (req, res) => {
         console.log("=== getMyReceivedReviews Debug Info ===");
         console.log("User ID:", userId);
 
-        // Get all reviews where this user was the teacher
-        const reviews = await Review.find({ teacherID: userId })
-            .populate('learnerID', 'fullname email profile.profilePhoto')
-            .populate('listingID', 'title description fee')
-            .sort({ createdAt: -1 });
-
-        console.log("Found received reviews:", reviews.length);
-
-        return res.status(200).json({
-            message: "Teacher received reviews retrieved successfully",
-            success: true,
-            reviews,
-            count: reviews.length
+        // This function is now deprecated since teacherID is removed
+        return res.status(410).json({
+            message: "Reviews by teacher are no longer tracked.",
+            success: false,
+            reviews: [],
+            count: 0
         });
 
     } catch (error) {
@@ -515,7 +480,6 @@ export const getReviewsByUserId = async (req, res) => {
 
         // Get all reviews by this specific user
         const reviews = await Review.find({ learnerID: userId })
-            .populate('teacherID', 'fullname email')
             .populate('listingID', 'title description fee')
             .sort({ createdAt: -1 });
 
@@ -545,39 +509,21 @@ export const getReviewsByUserId = async (req, res) => {
 // Debug function to check existing reviews for a specific listing
 export const checkExistingReviews = async (req, res) => {
     try {
-        const { learnerID, teacherID, listingID } = req.query;
-        
-        console.log("=== DEBUG: Checking existing reviews ===");
-        console.log("LearnerID:", learnerID);
-        console.log("TeacherID:", teacherID);
-        console.log("ListingID:", listingID);
-        
-        // Find any existing reviews with these IDs
-        const existingReviews = await Review.find({
-            $or: [
-                { learnerID, teacherID, listingID },
-                { learnerID, listingID },
-                { teacherID, listingID }
-            ]
-        }).populate('learnerID', 'fullname email')
-          .populate('teacherID', 'fullname email')
-          .populate('listingID', 'title');
-        
-        console.log("Found existing reviews:", existingReviews.length);
-        existingReviews.forEach(review => {
-            console.log("Review ID:", review._id);
-            console.log("Learner:", review.learnerID?.fullname);
-            console.log("Teacher:", review.teacherID?.fullname);
-            console.log("Listing:", review.listingID?.title);
-            console.log("---");
-        });
-        
-        return res.status(200).json({
-            message: "Debug info retrieved",
-            success: true,
-            existingReviews,
-            searchCriteria: { learnerID, teacherID, listingID }
-        });
+                const { learnerID, listingID } = req.query;
+
+                // Find any existing reviews with these IDs
+                const existingReviews = await Review.find({
+                        learnerID,
+                        listingID
+                }).populate('learnerID', 'fullname email')
+                    .populate('listingID', 'title');
+
+                return res.status(200).json({
+                        message: "Debug info retrieved",
+                        success: true,
+                        existingReviews,
+                        searchCriteria: { learnerID, listingID }
+                });
         
     } catch (error) {
         console.error("Error in debug function:", error);
@@ -620,13 +566,13 @@ export const clearAllReviews = async (req, res) => {
 // Check course completion status for a user (for reviews)
 export const checkCourseCompletionStatusForReview = async (req, res) => {
     try {
-        const { learnerID, teacherID, listingID } = req.params;
+        const { learnerID, listingID } = req.params;
         const userId = req.user.userId; // From middleware
 
         // Validate required fields
-        if (!learnerID || !teacherID || !listingID) {
+        if (!learnerID || !listingID) {
             return res.status(400).json({
-                message: "Learner ID, Teacher ID, and Listing ID are required",
+                message: "Learner ID and Listing ID are required",
                 success: false
             });
         }
@@ -642,7 +588,6 @@ export const checkCourseCompletionStatusForReview = async (req, res) => {
         // Get all sessions for this course
         const allSessionsForListing = await Session.find({
             learnerID: learnerID,
-            teacherID: teacherID,
             skillListingID: listingID
         });
 
@@ -671,7 +616,6 @@ export const checkCourseCompletionStatusForReview = async (req, res) => {
         // Check if user has already reviewed this course
         const existingReview = await Review.findOne({
             learnerID,
-            teacherID,
             listingID
         });
 

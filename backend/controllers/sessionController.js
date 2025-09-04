@@ -323,3 +323,39 @@ export const getTeacherSessions = async (req, res) => {
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
+
+// Get status of a session by skillListingID
+export const getSessionStatus = async (req, res) => {
+    try {
+        const { skillListingID } = req.params;
+        const userId = req.user.userId;
+        if (!skillListingID) {
+            return res.status(400).json({
+                message: "Skill Listing ID is required",
+                success: false
+            });
+        }
+        // Find the session for this user and skill listing
+        const session = await Session.findOne({
+            skillListingID,
+            learnerID: userId
+        });
+        if (!session) {
+            return res.status(404).json({
+                message: "Session not found for this user and skill listing",
+                success: false
+            });
+        }
+        return res.status(200).json({
+            message: "Session status retrieved successfully",
+            success: true,
+            status: session.status
+        });
+    } catch (error) {
+        console.error("Error getting session status:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
+    }
+};
