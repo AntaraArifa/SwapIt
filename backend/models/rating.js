@@ -6,11 +6,6 @@ const ratingSchema = new mongoose.Schema({
         ref: 'User', // reference to the User model
         required: true
     },
-    teacherID: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User', // reference to the User model
-        required: true
-    },
     listingID:{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SkillListing', // reference to the SkillListing model
