@@ -62,7 +62,6 @@ const LearnerSessions = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
 
-  // Get proficiency badge styling based on level
   const getProficiencyBadgeStyle = (proficiency) => {
     const level = proficiency?.toLowerCase() || 'beginner';
     const styles = {
