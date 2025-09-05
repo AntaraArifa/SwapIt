@@ -86,6 +86,50 @@ const SkillDetails = (onMessageClick) => {
     }
   };
 
+  // Fetch reviews for a listing
+  const fetchReviews = async (listingId) => {
+    try {
+      setReviewsLoading(true);
+      setReviewsError(null);
+      
+      const token = getCookie("token");
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`http://localhost:3000/api/v1/reviews/listing/${listingId}`, {
+        method: "GET",
+        headers: headers,
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setReviews(data.reviews || []);
+          // Update review stats with more accurate data from reviews endpoint
+          setReviewStats({
+            averageRating: data.averageRating || 0,
+            totalReviews: data.totalReviews || 0,
+          });
+        } else {
+          setReviewsError(data.message || "Failed to fetch reviews");
+        }
+      } else {
+        setReviewsError("Failed to load reviews");
+      }
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+      setReviewsError("Error loading reviews");
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
   // Check registration status for the current user
   const checkRegistrationStatus = async (courseId) => {
     if (!user) {
@@ -286,6 +330,13 @@ const SkillDetails = (onMessageClick) => {
       setSessionStatus(null);
     }
   }, [id, user]);
+
+  // Fetch reviews when reviews tab is selected
+  useEffect(() => {
+    if (selectedTab === "reviews" && skill && skill._id) {
+      fetchReviews(skill._id);
+    }
+  }, [selectedTab, skill]);
 
   // Loading state
   if (loading) {
@@ -631,10 +682,105 @@ const SkillDetails = (onMessageClick) => {
                   <h3 className="text-xl font-semibold mb-4 text-gray-900">
                     Student Reviews
                   </h3>
-                  <div className="text-center py-8 text-gray-500">
-                    <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No reviews yet. Be the first to review this skill!</p>
-                  </div>
+                  
+                  {reviewsLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading reviews...</p>
+                    </div>
+                  ) : reviewsError ? (
+                    <div className="text-center py-8 text-red-500">
+                      <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>{reviewsError}</p>
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    <div className="space-y-6">
+                      {/* Reviews Summary */}
+                      <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                        <div className="flex items-center gap-4">
+                          <div className="text-center">
+                            <div className="text-3xl font-bold text-gray-900">
+                              {reviewStats.averageRating ? reviewStats.averageRating.toFixed(1) : 'N/A'}
+                            </div>
+                            <div className="flex justify-center mb-1">
+                              {renderStarRating(reviewStats.averageRating || 0)}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {reviewStats.totalReviews} review{reviewStats.totalReviews !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600">
+                              {reviewStats.averageRating ? 
+                                `Based on ${reviewStats.totalReviews} student reviews` : 
+                                `${reviewStats.totalReviews} reviews (minimum 5 required for average rating)`
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Individual Reviews */}
+                      <div className="space-y-4">
+                        {reviews.map((review) => (
+                          <div key={review._id} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                              {/* Reviewer Avatar */}
+                              <div className="flex-shrink-0">
+                                {review.learnerID?.profile?.profilePhoto ? (
+                                  <img
+                                    src={review.learnerID.profile.profilePhoto}
+                                    alt={review.learnerID.fullname}
+                                    className="w-10 h-10 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-sm font-semibold text-gray-600">
+                                    {review.learnerID?.fullname
+                                      ? review.learnerID.fullname
+                                          .split(" ")
+                                          .map((n) => n[0])
+                                          .join("")
+                                      : "?"}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Review Content */}
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <h4 className="font-medium text-gray-900">
+                                      {review.learnerID?.fullname || "Anonymous"}
+                                    </h4>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex">
+                                        {renderStarRating(review.rating)}
+                                      </div>
+                                      <span className="text-sm text-gray-600">
+                                        {review.rating}/5
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {formatDate(review.createdAt)}
+                                  </div>
+                                </div>
+                                
+                                <p className="text-gray-700 leading-relaxed">
+                                  {review.reviewText}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No reviews yet. Be the first to review this skill!</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
